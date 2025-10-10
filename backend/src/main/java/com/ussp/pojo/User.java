@@ -1,5 +1,6 @@
 package com.ussp.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 public class User {
     private Long id;                 // 主键ID
     private String username;         // 登录名
+    @JsonIgnore // 让springmvc把当前对象转化成json字符串的时候，忽略password，最终的json字符串中就没有password这个属性了
     private String password;         // 密码（加密存储，MD5）
     private String avatar;           // 头像URL
     private String name;             // 姓名

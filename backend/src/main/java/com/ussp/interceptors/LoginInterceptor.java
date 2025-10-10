@@ -1,6 +1,7 @@
 package com.ussp.interceptors;
 
 import com.ussp.utils.JwtUtil;
+import com.ussp.utils.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,8 @@ public class LoginInterceptor implements HandlerInterceptor {
             }
             Map<String, Object> claims = JwtUtil.parseToken(token);
 
+            // 把业务数据存放于ThreadLocal中
+            ThreadLocalUtil.set(claims);
             // 验证通过
             return true;
         } catch (Exception e) {
@@ -39,5 +42,11 @@ public class LoginInterceptor implements HandlerInterceptor {
             // 不放行
             return false;
         }
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 清除ThreadLocal中的数据 防止内存泄漏
+        ThreadLocalUtil.remove();
     }
 }
