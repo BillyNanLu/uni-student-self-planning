@@ -2,6 +2,8 @@
 
 ## 1. 用户相关接口
 
+<p style="color:red; font-weight:bold">个人信息修改、密码修改、头像修改权限为用户和管理员所有，用户相关接口中省略，具体请参照2.3-2.6</p>
+
 ### 1.1 注册
 
 #### 1.1.1 基本信息
@@ -256,72 +258,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 
 
-### 1.4 用户修改密码
-
-#### 1.4.1 基本信息
-
-> 请求路径：/users/{id}/password
->
-> 请求方式：PUT
->
-> 接口描述：用户修改自己的登录密码，需验证旧密码。
-
-
-
-#### 1.4.2 请求参数
-
-请求头参数说明：
-
-| **参数名称**  | **说明** | **类型** | **是否必须** | **备注**                    |
-| ------------- | -------- | -------- | ------------ | --------------------------- |
-| Authorization | 认证令牌 | string   | 是           | 格式：Bearer + 空格 + token |
-
-路径参数说明：
-
-| **参数名称** | **说明** | **类型** | **是否必须** | **备注**       |
-| ------------ | -------- | -------- | ------------ | -------------- |
-| id           | 用户ID   | long     | 是           | 当前登录用户ID |
-
-请求体参数说明：
-
-| **参数名称** | **说明** | **类型** | **是否必须** | **备注**             |
-| ------------ | -------- | -------- | ------------ | -------------------- |
-| oldPassword  | 原密码   | string   | 是           | 原密码明文           |
-| newPassword  | 新密码   | string   | 是           | 新密码明文（5~16位） |
-
-请求数据样例：
-
-```json
-{
-  "oldPassword": "123456",
-  "newPassword": "newpass789"
-}
-```
-
-#### 1.4.3 响应数据
-
-响应数据类型：application/json
-
-响应数据案例（成功）：
-
-```json
-{
-  "code": 0,
-  "message": "密码修改成功，请重新登录",
-  "data": null
-}
-```
-
-响应数据案例（失败）：
-
-```json
-{
-  "code": 1007,
-  "message": "原密码错误",
-  "data": null
-}
-```
-
 
 
 ## 2. 管理员相关接口
@@ -380,7 +316,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | \|- records     | array    | 必须         | 用户列表数据            |
 | \|- id          | number   | 必须         | 用户ID                  |
 | \|- username    | string   | 必须         | 登录名                  |
-| \|- name        | string   | 否           | 姓名                    |
+| \|- name        | string   | 必须         | 姓名                    |
 | \|-email        | string   | 必须         | 邮箱                    |
 | \|- phone       | string   | 必须         | 手机号                  |
 | \|- role        | number   | 必须         | 角色（0=学生,1=管理员） |
@@ -523,15 +459,24 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 
 
-### 2.3 修改用户信息
+### 2.3 用户/管理员修改信息
 
 #### 2.3.1 基本信息
 
-> 请求路径：/users/{id}
+> 请求路径：
+>
+> - 普通用户更新自己信息：`/users/update`
+>
+> - 管理员更新任意用户信息：`/admin/users/{id}`
 >
 > 请求方式：PUT
 >
-> 接口描述：用户可更新自己的基本信息；管理员可修改任意用户的账号信息。
+> 接口描述：
+>
+> - 普通用户可更新自己的基本信息（`name`、`email`、`phone`）
+> - 管理员可修改任意用户的信息（包括 `name`、`email`、`phone`、`role`）
+>
+> 此接口不能修改 `username`、`password`、`avatar`。
 
 
 
@@ -553,18 +498,37 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 | **参数名** | **说明**                | **类型** | **是否必须** | **权限说明**    |
 | ---------- | ----------------------- | -------- | ------------ | --------------- |
-| username   | 用户名                  | string   | 否           | 用户/管理员均可 |
+| name       | 姓名（昵称）            | string   | 否           | 用户/管理员均可 |
 | email      | 邮箱                    | string   | 否           | 用户/管理员均可 |
 | phone      | 手机号                  | string   | 否           | 用户/管理员均可 |
 | role       | 角色（0=学生,1=管理员） | int      | 否           | 仅管理员可修改  |
 
+> ⚠️ 说明：
+>
+> - `username`、`password`、`avatar` 字段不可通过此接口修改；
+> - 若前端传入这些字段，后端应忽略并记录警告日志。
+
 请求示例：
+
+普通用户更新自己的信息：
 
 ```json
 {
-  "username": "newbilly",
+  "username": "billy",
+  "name": "newbilly",
   "email": "newbilly@example.com",
   "phone": "13800002222"
+}
+```
+
+**管理员更新用户信息**
+
+```json
+{
+  "name": "Student A",
+  "email": "studenta@example.com",
+  "phone": "13800003333",
+  "role": 0
 }
 ```
 
@@ -590,7 +554,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "message": "信息更新成功",
   "data": {
     "id": 101,
-    "username": "newbilly",
+    "username": "billy",
+    "name": "newbilly",
     "email": "newbilly@example.com",
     "phone": "13800002222",
     "role": 0
@@ -604,6 +569,136 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 {
   "code": 1005,
   "message": "权限不足，无法修改其他用户信息",
+  "data": null
+}
+```
+
+失败响应示例（用户不存在）
+
+```json
+{
+  "code": 1006,
+  "message": "要修改的用户不存在",
+  "data": null
+}
+```
+
+
+
+### 2.4 用户/管理员修改密码
+
+#### 2.4.1 基本信息
+
+> 请求路径：
+>
+> - 普通用户修改自己密码：`/users/updatePwd`
+> - 管理员修改任意用户密码：`/admin/users/{id}/updatePwd`
+>
+> 请求方式：PATCH
+>
+> 接口描述：
+>
+> - 普通用户：需验证旧密码后修改自己的登录密码。
+> - 管理员：可直接重置任意用户的密码（无需旧密码验证）。
+
+
+
+#### 2.4.2 请求参数
+
+请求头参数说明：
+
+| **参数名称**  | **说明** | **类型** | **是否必须** | **备注**                    |
+| ------------- | -------- | -------- | ------------ | --------------------------- |
+| Authorization | 认证令牌 | string   | 是           | 格式：Bearer + 空格 + token |
+
+路径参数说明（仅管理员）：
+
+| **参数名称** | **说明** | **类型** | **是否必须** | **备注**             |
+| ------------ | -------- | -------- | ------------ | -------------------- |
+| id           | 用户ID   | long     | 是           | 要修改密码的目标用户 |
+
+请求体参数说明：
+
+| **参数名称** | **说明**          | **类型** | **是否必须** | **备注**                   |
+| ------------ | ----------------- | -------- | ------------ | -------------------------- |
+| oldPassword  | 原密码            | string   | 是(用户必填) | 用户修改密码时需验证原密码 |
+| newPassword  | 新密码（5~16 位） | string   | 是           | 管理员可直接重置新密码     |
+
+请求数据样例：
+
+普通用户修改自己密码：
+
+```json
+{
+  "oldPassword": "123456",
+  "newPassword": "newpass789"
+}
+```
+
+管理员重置用户密码：
+
+```json
+{
+  "newPassword": "reset8888"
+}
+```
+
+
+
+#### 2.4.3 响应数据
+
+响应数据类型：application/json
+
+| **字段** | **类型** | **说明**           |
+| -------- | -------- | ------------------ |
+| code     | number   | 响应码，0 表示成功 |
+| message  | string   | 提示信息           |
+| data     | object   | 可为空             |
+
+响应数据案例（成功）：
+
+普通用户修改成功：
+
+```json
+{
+  "code": 0,
+  "message": "密码修改成功，请重新登录",
+  "data": null
+}
+```
+
+管理员重置密码成功：
+
+```
+{
+  "code": 0,
+  "message": "密码重置成功",
+  "data": {
+    "id": 102,
+    "username": "lucy",
+    "email": "lucy@example.com",
+    "phone": "13800003333",
+    "role": 0
+  }
+}
+```
+
+响应数据案例（失败）：
+
+```json
+{
+  "code": 1007,
+  "message": "原密码错误",
+  "data": null
+}
+```
+
+管理员尝试修改其他管理员密码（无权限）：
+
+```json
+{
+  "code": 1008,
+  "message": "权限不足，无法修改管理员密码",
   "data": null
 }
 ```
