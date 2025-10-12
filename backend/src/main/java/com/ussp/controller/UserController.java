@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -87,6 +88,51 @@ public class UserController {
         String username = (String) map.get("username");
         User user = userService.findByUsername(username);
         return Result.success(user);
+    }
+
+    // TODO: 用户自己修改自己的个人信息
+    @PutMapping("/update")
+    public Result update(@RequestBody @Validated User user) {
+        // 更新用户信息
+        userService.update(user);
+
+        // 更新后再查一次数据库，确保返回的是最新数据
+        User updatedUser = userService.findByUsername(user.getUsername());
+
+        // 返回标准响应格式
+        return new Result<>(0, "信息更新成功", updatedUser);
+    }
+
+    // TODO: 用户自己修改自己的密码
+    @PatchMapping("/updatePwd")
+    public Result updatePwd(@RequestBody Map<String, String> params) {
+        // 1. 校验参数
+        String oldPwd = params.get("old_pwd");
+        String newPwd = params.get("new_pwd");
+        String rePwd = params.get("re_pwd");
+
+        if (!StringUtils.hasLength(oldPwd) || !StringUtils.hasLength(newPwd) || !StringUtils.hasLength(rePwd)) {
+            return Result.error("参数不能为空");
+        }
+
+        // 原密码是否正确
+        // 调用userService根据用户名拿到原密码，再和old_pwd比对
+        Map<String, Object> map = ThreadLocalUtil.get();
+        String username = (String) map.get("username");
+        User user = userService.findByUsername(username);
+        if (!user.getPassword().equals(Md5Util.getMD5String(oldPwd))) {
+            return Result.error("原密码错误");
+        }
+
+        // newPwd 和 oldPwd是否一样
+        if (!rePwd.equals(newPwd)) {
+            return Result.error("两次密码不一致");
+        }
+
+        // 2. 更新密码
+        userService.updatePwd(newPwd);
+
+        return Result.success("密码更新成功，请重新登录");
     }
 
 
