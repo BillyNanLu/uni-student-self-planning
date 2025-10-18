@@ -1,9 +1,10 @@
 <script setup>
-
+  import LoginVue from './views/Login.vue'
 </script>
 
 <template>
-  UniStudentSelfPlanning
+<!--  UniStudentSelfPlanning-->
+  <LoginVue/>
 </template>
 
 <style scoped>
