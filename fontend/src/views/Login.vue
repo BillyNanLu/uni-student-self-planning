@@ -54,7 +54,7 @@ const rules = {
 }
 
 // 接口调用逻辑
-import {userRegisterService} from '@/api/user.js'
+import { userRegisterService, userLoginService } from '@/api/user.js'
 
 const register = async () => {
   const valid = await formRef.value.validate()
@@ -67,6 +67,19 @@ const register = async () => {
     registerData.value = {...registerData.value, password: '', rePassword: '', name: '', phone: '', email: ''}
   } else {
     ElMessage.error(result.data || '注册失败，请重试')
+  }
+}
+
+const login = async () => {
+  const valid = await formRef.value.validate()
+  if (!valid) return
+
+  let result = await userLoginService(registerData.value)
+  if (result.code === 0) {
+    ElMessage.success('登录成功！开启你的规划之旅～')
+    // 跳转至平台首页
+  } else {
+    ElMessage.error(result.data || '用户名或密码错误')
   }
 }
 
