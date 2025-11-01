@@ -1,487 +1,449 @@
 <script setup>
-import {User, UserFilled, Phone, Message, Lock} from '@element-plus/icons-vue'
-import {ref} from 'vue'
-import {ElMessage, ElForm} from 'element-plus'
-
-// 默认显示登录，符合平台使用场景
-const isRegister = ref(false)
-const registerData = ref({
-  username: '',
-  password: '',
-  rePassword: '',
-  name: '',
-  phone: '',
-  email: ''
-})
-const formRef = ref(null)
-// 记住我绑定值
-const rememberMe = ref(false)
-
-// 密码校验函数（不变）
-const checkPassword = (rule, value, callback) => {
-  if (value === '')
-    callback(new Error('请再次确认密码'))
-  else if (value !== registerData.value.password)
-    callback(new Error('两次输入密码不一致!'))
-  else
-    callback()
-}
-
-// 表单校验规则（不变）
-const rules = {
-  username: [
-    {required: true, message: '请输入用户名', trigger: 'blur'},
-    {min: 5, max: 16, message: '用户名长度在 5 到 16 个字符', trigger: 'blur'}
-  ],
-  name: [
-    {min: 5, max: 16, message: '昵称长度在 5 到 16 个字符', trigger: 'blur'}
-  ],
-  phone: [
-    {required: true, message: '请输入手机号', trigger: 'blur'},
-    {pattern: /^1[3-9]\d{9}$/, message: '请输入有效的11位手机号', trigger: 'blur'}
-  ],
-  email: [
-    {required: true, message: '请输入邮箱', trigger: 'blur'},
-    {type: 'email', message: '请输入有效的邮箱地址（如：student@xxx.com）', trigger: 'blur'}
-  ],
-  password: [
-    {required: true, message: '请输入密码', trigger: 'blur'},
-    {min: 5, max: 16, message: '密码长度在 5 到 16 个字符', trigger: 'blur'}
-  ],
-  rePassword: [
-    {validator: checkPassword, trigger: 'blur'}
-  ]
-}
-
-// 接口调用逻辑
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+// 引入Element组件与图标
+import {
+  ElHeader, ElContainer, ElForm, ElFormItem, ElInput,
+  ElButton, ElCheckbox, ElLink, ElMessage, ElIcon
+} from 'element-plus'
+import {
+  School, HomeFilled, User, Lock, Phone, Message as MessageIcon
+} from '@element-plus/icons-vue'
+// 引入接口服务（需与你的后端接口对应）
 import { userRegisterService, userLoginService } from '@/api/user.js'
 
-const register = async () => {
-  const valid = await formRef.value.validate()
-  if (!valid) return
+const router = useRouter()
 
-  let result = await userRegisterService(registerData.value)
-  if (result.code === 0) {
-    ElMessage.success('注册成功！欢迎加入大学生自我规划平台～')
-    isRegister.value = true
-    registerData.value = {...registerData.value, password: '', rePassword: '', name: '', phone: '', email: ''}
-  } else {
-    ElMessage.error(result.data || '注册失败，请重试')
+// 1. 核心状态与参数（覆盖登录/注册全场景）
+const isRegister = ref(false) // 切换登录/注册表单
+const formRef = ref(null)     // 表单引用
+const rememberMe = ref(false) // 记住登录状态
+
+// 表单数据（统一管理登录/注册字段）
+const formData = ref({
+  username: '',    // 用户名（登录/注册通用）
+  password: '',    // 密码（登录/注册通用）
+  rePassword: '',  // 确认密码（仅注册）
+  name: '',        // 昵称（仅注册）
+  phone: '',       // 手机号（仅注册）
+  email: ''        // 邮箱（仅注册）
+})
+
+// 2. 表单校验规则（严格匹配字段要求）
+const formRules = ref({
+  // 用户名规则（登录/注册通用）
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 5, max: 16, message: '用户名长度需在 5-16 个字符之间', trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: '仅支持字母、数字和下划线', trigger: 'blur' }
+  ],
+  // 密码规则（登录/注册通用）
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 5, max: 16, message: '密码长度需在 5-16 个字符之间', trigger: 'blur' },
+    { pattern: /^(?=.*[a-zA-Z])(?=.*\d)/, message: '需包含字母和数字', trigger: 'blur' }
+  ],
+  // 确认密码规则（仅注册）
+  rePassword: [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== formData.value.password) {
+          callback(new Error('两次输入密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  // 昵称规则（仅注册，选填）
+  name: [
+    { min: 2, max: 12, message: '昵称长度需在 2-12 个字符之间', trigger: 'blur' }
+  ],
+  // 手机号规则（仅注册）
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的11位手机号', trigger: 'blur' }
+  ],
+  // 邮箱规则（仅注册）
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入有效的邮箱（如：student@xxx.com）', trigger: 'blur' }
+  ]
+})
+
+// 3. 核心交互函数
+// 表单提交（登录/注册统一处理）
+const handleSubmit = async () => {
+  try {
+    // 表单校验
+    await formRef.value.validate()
+    // 区分登录/注册接口
+    if (isRegister.value) {
+      await handleRegister()
+    } else {
+      await handleLogin()
+    }
+  } catch (error) {
+    // 校验失败不做额外处理（Element会自动提示）
+    return
   }
 }
 
-const login = async () => {
-  const valid = await formRef.value.validate()
-  if (!valid) return
-
-  let result = await userLoginService(registerData.value)
-  if (result.code === 0) {
-    ElMessage.success('登录成功！开启你的规划之旅～')
-    // 跳转至平台首页
-  } else {
-    ElMessage.error(result.data || '用户名或密码错误')
+// 登录逻辑
+const handleLogin = async () => {
+  try {
+    const res = await userLoginService({
+      username: formData.value.username,
+      password: formData.value.password,
+      rememberMe: rememberMe.value
+    })
+    if (res.code === 0) {
+      ElMessage.success('登录成功！即将跳转至主页～')
+      // 登录成功后跳转主页（可根据需求添加Token存储）
+      setTimeout(() => router.push('/'), 1500)
+    } else {
+      ElMessage.error(res.message || '登录失败，请重试')
+    }
+  } catch (error) {
+    ElMessage.error('网络异常，请检查网络连接')
   }
 }
 
-const clearRegisterData = () => {
-  registerData.value = {
-    username: '',
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-    rePassword: ''
+// 注册逻辑
+const handleRegister = async () => {
+  try {
+    const res = await userRegisterService({
+      username: formData.value.username,
+      password: formData.value.password,
+      name: formData.value.name,
+      phone: formData.value.phone,
+      email: formData.value.email
+    })
+    if (res.code === 0) {
+      ElMessage.success('注册成功！请登录～')
+      // 注册成功后切换到登录表单并清空数据
+      isRegister.value = false
+      resetForm()
+    } else {
+      ElMessage.error(res.message || '注册失败，请重试')
+    }
+  } catch (error) {
+    ElMessage.error('网络异常，请检查网络连接')
   }
+}
+
+// 切换登录/注册表单
+const toggleForm = () => {
+  isRegister.value = !isRegister.value
+  resetForm() // 切换时清空表单
+}
+
+// 重置表单
+const resetForm = () => {
   formRef.value?.resetFields()
   rememberMe.value = false
 }
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <!-- 左侧品牌区 -->
-      <div class="login-brand">
-        <div class="brand-logo">
-          <span class="logo-text">USSP</span>
+  <ElContainer class="login-layout">
+    <!-- 1. 顶部导航栏（与主页Layout完全一致） -->
+    <ElHeader class="layout-header" fixed>
+      <div class="header-container">
+        <!-- 平台Logo与名称 -->
+        <div class="logo">
+          <ElIcon class="logo-icon"><School /></ElIcon>
+          <span class="logo-text">大学生自我规划平台</span>
         </div>
-        <h2 class="brand-title">大学生自我规划平台</h2>
-        <p class="brand-desc">在这里，清晰你的目标，规划你的未来</p>
-        <div class="brand-features">
-          <div class="feature-item">📚 学业规划</div>
-          <div class="feature-item">💼 职业探索</div>
-          <div class="feature-item">🎯 目标管理</div>
+        <!-- 导航操作：仅保留「返回主页」按钮 -->
+        <div class="nav-actions">
+          <ElButton
+              type="text"
+              :icon="HomeFilled"
+              @click="router.push('/')"
+              class="back-home-btn"
+          >
+            返回主页
+          </ElButton>
         </div>
       </div>
+    </ElHeader>
 
-      <!-- 右侧表单区 -->
-      <div class="login-form-wrapper">
-        <!-- 注册表单 -->
-        <el-form
+    <!-- 2. 中间表单区（居中布局） -->
+    <div class="login-container">
+      <div class="login-card">
+        <!-- 表单标题 -->
+        <div class="form-header">
+          <h2 class="title">{{ isRegister ? '新用户注册' : '账号登录' }}</h2>
+          <p class="desc">
+            {{ isRegister
+              ? '注册后可享受个性化规划、AI咨询等专属服务'
+              : '欢迎回来，继续你的规划之旅'
+            }}
+          </p>
+        </div>
+
+        <!-- 核心表单 -->
+        <ElForm
             ref="formRef"
-            size="large"
-            autocomplete="off"
-            v-if="isRegister"
-            :model="registerData"
-            :rules="rules"
+            :model="formData"
+            :rules="formRules"
             class="login-form"
+            label-position="top"
+            size="large"
         >
-          <el-form-item class="form-header">
-            <h3>新用户注册</h3>
-          </el-form-item>
-
-          <el-form-item prop="username" class="form-item">
-            <div class="form-tip">用户名用于登录，创建后暂不支持修改</div>
-            <el-input
+          <!-- 用户名（登录/注册通用） -->
+          <ElFormItem label="用户名" prop="username">
+            <ElInput
+                v-model="formData.username"
                 :prefix-icon="User"
-                placeholder="请设置用户名（5-16位）"
-                v-model="registerData.username"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
+                placeholder="请输入用户名（5-16位，支持字母/数字/下划线）"
+                clearable
+            />
+          </ElFormItem>
 
-          <el-form-item prop="name" class="form-item">
-            <el-input
-                :prefix-icon="UserFilled"
-                placeholder="请输入昵称（选填，5-16位）"
-                v-model="registerData.name"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="phone" class="form-item">
-            <el-input
-                :prefix-icon="Phone"
-                placeholder="请输入手机号（用于账号安全）"
-                v-model="registerData.phone"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="email" class="form-item">
-            <el-input
-                :prefix-icon="Message"
-                placeholder="请输入邮箱（如：student@xxx.com）"
-                v-model="registerData.email"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="password" class="form-item">
-            <el-input
+          <!-- 密码（登录/注册通用） -->
+          <ElFormItem label="密码" prop="password">
+            <ElInput
+                v-model="formData.password"
                 :prefix-icon="Lock"
                 type="password"
-                placeholder="请设置密码（5-16位）"
-                v-model="registerData.password"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
+                placeholder="请输入密码（5-16位，需包含字母和数字）"
+                clearable
+            />
+          </ElFormItem>
 
-          <el-form-item prop="rePassword" class="form-item">
-            <el-input
-                :prefix-icon="Lock"
-                type="password"
-                placeholder="请再次输入密码"
-                v-model="registerData.rePassword"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
+          <!-- 注册专属字段（条件渲染） -->
+          <template v-if="isRegister">
+            <ElFormItem label="确认密码" prop="rePassword">
+              <ElInput
+                  v-model="formData.rePassword"
+                  :prefix-icon="Lock"
+                  type="password"
+                  placeholder="请再次输入密码"
+                  clearable
+              />
+            </ElFormItem>
 
-          <el-form-item class="form-item form-btn-group">
-            <el-button
-                class="form-btn"
+            <ElFormItem label="昵称（选填）" prop="name">
+              <ElInput
+                  v-model="formData.name"
+                  :prefix-icon="User"
+                  placeholder="请输入昵称（2-12位，将显示在个人中心）"
+                  clearable
+              />
+            </ElFormItem>
+
+            <ElFormItem label="手机号" prop="phone">
+              <ElInput
+                  v-model="formData.phone"
+                  :prefix-icon="Phone"
+                  placeholder="请输入有效的11位手机号"
+                  clearable
+                  maxlength="11"
+              />
+            </ElFormItem>
+
+            <ElFormItem label="邮箱" prop="email">
+              <ElInput
+                  v-model="formData.email"
+                  :prefix-icon="MessageIcon"
+                  placeholder="请输入常用邮箱（用于账号找回）"
+                  clearable
+              />
+            </ElFormItem>
+          </template>
+
+          <!-- 登录专属字段（条件渲染） -->
+          <template v-else>
+            <ElFormItem class="remember-item">
+              <ElCheckbox v-model="rememberMe">记住登录状态（7天内免登录）</ElCheckbox>
+              <ElLink type="primary" :underline="false" class="forgot-link">
+                忘记密码？
+              </ElLink>
+            </ElFormItem>
+          </template>
+
+          <!-- 提交按钮 -->
+          <ElFormItem class="submit-item">
+            <ElButton
                 type="primary"
-                auto-insert-space
-                @click="register"
+                class="submit-btn"
+                @click="handleSubmit"
+                :loading="false"
             >
-              注册并加入平台
-            </el-button>
-          </el-form-item>
+              {{ isRegister ? '注册并加入平台' : '登录平台' }}
+            </ElButton>
+          </ElFormItem>
 
-          <el-form-item class="form-switch">
-            <el-link
+          <!-- 切换表单链接 -->
+          <ElFormItem class="switch-item">
+            <ElLink
                 type="info"
                 :underline="false"
-                @click="isRegister = false; clearRegisterData()"
+                @click="toggleForm"
+                class="switch-link"
             >
-              ← 已有账号？直接登录
-            </el-link>
-          </el-form-item>
-        </el-form>
-
-        <!-- 登录表单 -->
-        <el-form
-            ref="formRef"
-            size="large"
-            autocomplete="off"
-            v-else
-            :model="registerData"
-            :rules="rules"
-            class="login-form"
-        >
-          <el-form-item class="form-header">
-            <h3>账号登录</h3>
-            <p class="header-tip">欢迎回来，继续你的规划进度</p>
-          </el-form-item>
-
-          <el-form-item prop="username" class="form-item">
-            <el-input
-                :prefix-icon="User"
-                placeholder="请输入用户名"
-                v-model="registerData.username"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="password" class="form-item">
-            <el-input
-                name="password"
-                :prefix-icon="Lock"
-                type="password"
-                placeholder="请输入密码"
-                v-model="registerData.password"
-                class="form-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item class="form-item form-option-group">
-            <div class="option-left">
-              <el-checkbox v-model="rememberMe" class="remember-checkbox">记住登录状态</el-checkbox>
-            </div>
-            <div class="option-right">
-              <el-link type="primary" :underline="false" class="forgot-link">忘记密码？</el-link>
-            </div>
-          </el-form-item>
-
-          <el-form-item class="form-item form-btn-group">
-            <el-button
-                class="form-btn"
-                type="primary"
-                auto-insert-space
-                @click="login"
-            >
-              登录平台
-            </el-button>
-          </el-form-item>
-
-          <el-form-item class="form-switch">
-            <el-link
-                type="info"
-                :underline="false"
-                @click="isRegister = true; clearRegisterData()"
-            >
-              还没有账号？立即注册 →
-            </el-link>
-          </el-form-item>
-        </el-form>
+              {{ isRegister
+                ? '已有账号？点击登录'
+                : '还没有账号？立即注册'
+              }}
+            </ElLink>
+          </ElFormItem>
+        </ElForm>
       </div>
     </div>
-  </div>
+  </ElContainer>
 </template>
 
-<style lang="scss" scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+<style scoped lang="scss">
+// 1. 全局布局样式
+.login-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f7fa; // 与主页背景色一致
 }
 
-// 主题色「青春橙」色系
-$primary-color: #ff7a45; // 主色：活力橙
-$light-primary: #fff5f0; // 浅色：背景辅助
-$dark-primary: #e05a28; // 深色：hover/强调
+// 2. 顶部导航栏样式（与主页Layout统一）
+.layout-header {
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  z-index: 100;
+  height: 64px;
+}
 
+.header-container {
+  width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  color: #409eff; // 主页主题色
+  font-size: 24px;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.back-home-btn {
+  color: #409eff;
+  font-size: 14px;
+}
+
+// 3. 表单容器样式（居中布局）
 .login-container {
-  width: 100vw;
-  height: 100vh;
-  background: linear-gradient(135deg, #fff8f5 0%, #fff5f0 100%);
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: 20px 20px;
+  margin-top: 10px; // 避开顶部导航栏
 }
 
 .login-card {
   width: 100%;
-  max-width: 950px;
+  max-width: 480px;
   background-color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(255, 122, 69, 0.1);
-  overflow: hidden;
-  display: flex;
-  flex-direction: row;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    max-width: 420px;
-  }
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 40px;
 }
 
-// 左侧品牌区：增加平台特色展示
-.login-brand {
-  width: 42%;
-  background: linear-gradient(180deg, $primary-color 0%, $dark-primary 100%);
-  color: #fff;
-  padding: 50px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+// 4. 表单内部样式
+.form-header {
   text-align: center;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    padding: 35px 20px;
-  }
-
-  .brand-logo {
-    width: 80px;
-    height: 80px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 20px;
-
-    .logo-text {
-      font-size: 24px;
-      font-weight: 700;
-    }
-  }
-
-  .brand-title {
-    font-size: 26px;
-    margin-bottom: 12px;
-    font-weight: 600;
-  }
-
-  .brand-desc {
-    font-size: 15px;
-    opacity: 0.9;
-    line-height: 1.6;
-    margin-bottom: 30px;
-  }
-
-  // 平台特色项：直观展示功能价值
-  .brand-features {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    .feature-item {
-      font-size: 13px;
-      background-color: rgba(255, 255, 255, 0.15);
-      padding: 6px 12px;
-      border-radius: 20px;
-    }
-  }
+  margin-bottom: 32px;
 }
 
-.login-form-wrapper {
-  width: 58%;
-  padding: 50px 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
 
-  @media (max-width: 768px) {
-    width: 100%;
-    padding: 35px 20px;
-  }
+.desc {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
 }
 
 .login-form {
   width: 100%;
-  max-width: 340px;
 }
 
-.form-header {
-  margin-bottom: 35px !important;
-  text-align: center;
-
-  h3 {
-    font-size: 24px;
-    color: #2d3748;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-
-  .header-tip {
-    font-size: 13px;
-    color: #718096;
-  }
+.el-form-item {
+  margin-bottom: 24px !important;
 }
 
-.form-item {
-  margin-bottom: 20px !important;
-}
-
-.form-input {
-  border-radius: 8px !important;
-  border-color: #e2e8f0 !important;
-  transition: all 0.3s ease;
+.el-input {
+  border-radius: 6px !important;
+  border-color: #dcdfe6 !important;
+  transition: all 0.2s ease;
 
   &:focus {
-    border-color: $primary-color !important;
-    box-shadow: 0 0 0 2px rgba(56, 178, 172, 0.15) !important;
+    border-color: #409eff !important;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) !important;
   }
 }
 
-.form-tip {
-  font-size: 12px;
-  color: #718096;
-  margin-bottom: 6px;
-}
-
-.form-option-group {
+// 登录专属：记住密码与忘记密码
+.remember-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 26px !important;
-
-  .option-left {
-    .remember-checkbox {
-      font-size: 13px;
-      color: #4a5568;
-    }
-  }
-
-  .option-right {
-    .forgot-link {
-      font-size: 13px;
-      color: $primary-color !important;
-    }
-  }
+  margin-bottom: 24px !important;
 }
 
-.form-btn-group {
-  margin-bottom: 18px !important;
+.forgot-link {
+  font-size: 14px;
 }
 
-.form-btn {
+// 提交按钮
+.submit-item {
+  margin-bottom: 16px !important;
+}
+
+.submit-btn {
   width: 100%;
-  height: 44px;
-  border-radius: 8px !important;
-  background-color: $primary-color !important;
-  border-color: $primary-color !important;
+  height: 46px;
+  border-radius: 6px !important;
   font-size: 16px !important;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: $dark-primary !important;
-    border-color: $dark-primary !important;
-  }
+  background-color: #409eff !important;
+  border-color: #409eff !important;
 }
 
-.form-switch {
+.submit-btn:hover {
+  background-color: #66b1ff !important;
+  border-color: #66b1ff !important;
+}
+
+// 切换表单链接
+.switch-item {
   text-align: center;
   margin-bottom: 0 !important;
+}
 
-  el-link {
-    font-size: 14px;
-    color: $primary-color !important;
-  }
+.switch-link {
+  font-size: 14px;
+  color: #409eff !important;
 }
 </style>
