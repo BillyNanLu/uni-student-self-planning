@@ -40,7 +40,7 @@
 
   // 跳转登录/注册页面（复用已实现的页面）
   const handleGoToLogin = () => router.push('/login')
-  const handleGoToRegister = () => router.push('/register')
+  const handleGoToRegister = () => router.push('/login?type=register')
 
   // 已登录状态下的操作
   const handleGoToProfile = () => router.push('/profile') // 个人中心（后续开发）

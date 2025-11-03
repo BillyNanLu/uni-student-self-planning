@@ -4,7 +4,8 @@
 
 <template>
 <!--  UniStudentSelfPlanning-->
-  <LoginVue/>
+<!--  <LoginVue/>-->
+  <router-view></router-view>
 </template>
 
 <style scoped>

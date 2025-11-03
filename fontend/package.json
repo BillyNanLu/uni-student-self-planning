@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "axios": "^1.12.2",
-    "element-plus": "^2.11.4",
+    "element-plus": "^2.11.5",
     "fouter": "^0.1.2",
     "pinia": "^3.0.3",
     "pinia-persistedstate-plugin": "^0.1.0",
@@ -23,7 +23,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
     "sass": "^1.93.2",
+    "tailwindcss": "^4.1.16",
     "vite": "^7.1.7",
     "vite-plugin-vue-devtools": "^8.0.2"
   }

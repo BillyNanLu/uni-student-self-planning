@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 // 引入Element组件与图标
 import {
   ElHeader, ElContainer, ElForm, ElFormItem, ElInput,
@@ -9,15 +9,27 @@ import {
 import {
   School, HomeFilled, User, Lock, Phone, Message as MessageIcon
 } from '@element-plus/icons-vue'
-// 引入接口服务（需与你的后端接口对应）
+// 引入接口服务
 import { userRegisterService, userLoginService } from '@/api/user.js'
 
 const router = useRouter()
+const route = useRoute()  // 获取当前路由实例
 
 // 1. 核心状态与参数（覆盖登录/注册全场景）
-const isRegister = ref(false) // 切换登录/注册表单
+const isRegister = ref(route.query.type === 'register') // 切换登录/注册表单
 const formRef = ref(null)     // 表单引用
 const rememberMe = ref(false) // 记住登录状态
+
+// 监听路由参数变化（当手动修改URL或通过路由跳转时同步状态）
+watch(
+    () => route.query.type,  // 监听路由中type参数的变化
+    (newType) => {
+      isRegister.value = newType === 'register'
+      // 路由变化时重置表单
+      formRef.value?.resetFields()
+      rememberMe.value = false
+    }
+)
 
 // 表单数据（统一管理登录/注册字段）
 const formData = ref({
@@ -28,6 +40,21 @@ const formData = ref({
   phone: '',       // 手机号（仅注册）
   email: ''        // 邮箱（仅注册）
 })
+
+// 新增：路由跳转控制函数（用于按钮点击切换）
+const goToLogin = () => {
+  router.push({
+    path: '/login',
+    query: {}  // 清空type参数，显示登录表单
+  })
+}
+
+const goToRegister = () => {
+  router.push({
+    path: '/login',
+    query: { type: 'register' }  // 添加type=register参数，显示注册表单
+  })
+}
 
 // 2. 表单校验规则（严格匹配字段要求）
 const formRules = ref({
@@ -195,7 +222,7 @@ const resetForm = () => {
             size="large"
         >
           <!-- 用户名（登录/注册通用） -->
-          <ElFormItem label="用户名" prop="username">
+          <ElFormItem label="用户名（用于注册，暂不支持修改）" prop="username">
             <ElInput
                 v-model="formData.username"
                 :prefix-icon="User"
@@ -283,7 +310,7 @@ const resetForm = () => {
             <ElLink
                 type="info"
                 :underline="false"
-                @click="toggleForm"
+                @click="isRegister ? goToLogin() : goToRegister()"
                 class="switch-link"
             >
               {{ isRegister

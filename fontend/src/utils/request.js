@@ -3,7 +3,7 @@
 //导入axios  npm install axios
 import axios from 'axios';
 
-import { ELMessage } from 'element-plus'
+import { ElMessage } from 'element-plus'
 //定义一个变量,记录公共的前缀  ,  baseURL
 // const baseURL = 'http://localhost:8080';
 const baseURL = '/api';
@@ -21,7 +21,7 @@ instance.interceptors.response.use(
 
         // 服务异常
         // alert(result.data.msg ? result.data.msg : '服务异常');
-        ELMessage.error(result.data.msg ? result.data.msg : '服务异常');
+        ElMessage.error(result.data.msg ? result.data.msg : '服务异常');
         //异步的状态转化成失败的状态
         return Promise.reject(result.data)
     },
