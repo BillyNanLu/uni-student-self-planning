@@ -18,3 +18,8 @@ export const userLoginService = (loginData)=> {
         params.append(key, loginData[key])
     return request.post('/users/login', params)
 }
+
+// TODO: 提供调用获取用户信息接口的函数
+export const userInfoService = ()=> {
+    return request.get('/users/userInfo')
+}

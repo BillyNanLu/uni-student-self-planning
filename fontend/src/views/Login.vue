@@ -1,6 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useTokenStore } from "@/stores/token.js"
+
 // 引入Element组件与图标
 import {
   ElHeader, ElContainer, ElForm, ElFormItem, ElInput,
@@ -14,6 +16,8 @@ import { userRegisterService, userLoginService } from '@/api/user.js'
 
 const router = useRouter()
 const route = useRoute()  // 获取当前路由实例
+
+const tokenStore = useTokenStore()
 
 // 1. 核心状态与参数（覆盖登录/注册全场景）
 const isRegister = ref(route.query.type === 'register') // 切换登录/注册表单
@@ -128,7 +132,9 @@ const handleLogin = async () => {
     })
     if (res.code === 0) {
       ElMessage.success('登录成功！即将跳转至主页～')
-      // 登录成功后跳转主页（可根据需求添加Token存储）
+      // 把得到的token存储到pinia中
+      tokenStore.setToken(res.data)
+      // 登录成功后跳转主页
       setTimeout(() => router.push('/'), 1500)
     } else {
       ElMessage.error(res.message || '登录失败，请重试')

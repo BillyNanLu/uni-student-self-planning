@@ -16,6 +16,7 @@ export const useTokenStore = defineStore('token', () => {
     const token = ref('')
     // 2. 定义方法，修改token的值
     const setToken = (newToken) => {
+        console.log('接收的Token:', newToken) // 检查是否为字符串
         token.value = newToken
     }
 
@@ -28,5 +29,8 @@ export const useTokenStore = defineStore('token', () => {
         token, removeToken, setToken
     }
 }, {
-    persist: true // 持久化存储
+    persist: {
+        storage: sessionStorage, // 或 localStorage（根据需求选择）
+        paths: ['token'] // 只持久化 token 字段
+    }
 })

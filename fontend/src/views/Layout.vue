@@ -1,11 +1,17 @@
 <script setup>
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import { useRouter } from 'vue-router'
+  import { userInfoService } from "@/api/user.js"
+  import useUserInfoStore from "@/stores/userInfo.js";
+  const userInfoStore = useUserInfoStore();
+  import {useTokenStore} from "@/stores/token.js"
+  const tokenStore = useTokenStore();
   import FooterVue from './Footer.vue'
+
   // 引入Element Plus组件和图标
   import {
     ElHeader, ElMenu, ElMenuItem, ElButton, ElDropdown, ElDropdownMenu,
-    ElDropdownItem, ElAvatar, ElIcon
+    ElDropdownItem, ElAvatar, ElIcon, ElMessage, ElMessageBox
   } from 'element-plus'
   import {
     School, HomeFilled, Calendar, Message, Notebook, ArrowDownBold
@@ -13,11 +19,42 @@
 
   const router = useRouter()
 
-  // 状态管理：可后续接入Pinia存储用户状态
-  const isLogin = ref(false) // 登录状态（初始未登录，实际需从缓存/接口获取）
+  // 状态管理
+  const isLogin = ref(!!tokenStore.token) // 用TokenStore中的token初始化登录状态
   const userName = ref('') // 用户名（登录后赋值）
-  const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369e258433772d95361jpeg.jpeg') // 默认头像
+  const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png') // 默认头像
   const activeMenu = ref('home') // 当前激活的导航菜单
+
+  // 调用函数，获取用户相信信息
+  const getUserInfo = async () => {
+    // 调用接口
+    let result = await userInfoService()
+    // 数据存储到pinia中
+    userInfoStore.setInfo(result.data)
+    updateUserDisplay(result.data)
+  }
+
+  // 统一更新用户显示信息的函数
+  const updateUserDisplay = (userData) => {
+    isLogin.value = true
+    userName.value = userData.name || userData.username  // 优先显示昵称，没有则用用户名
+    // 如果接口返回头像，则覆盖默认头像
+    if (userData.avatar) {
+      userAvatar.value = userData.avatar
+    }
+  }
+
+  // 页面挂载时初始化用户信息
+  onMounted(() => {
+    if (tokenStore.token) { // 有Token才获取用户信息
+      getUserInfo().catch(err => {
+        // 若获取用户信息失败（如Token过期），清除Token并跳转登录
+        tokenStore.removeToken()
+        isLogin.value = false
+        router.push('/login')
+      })
+    }
+  })
 
   // 导航菜单切换：跳转到对应页面
   const handleMenuSelect = (index) => {
@@ -46,10 +83,27 @@
   const handleGoToProfile = () => router.push('/profile') // 个人中心（后续开发）
   const handleGoToPlanProgress = () => router.push('/planning/progress') // 规划进度（后续开发）
   const handleLogout = () => {
-    // 退出登录逻辑：清除缓存、重置状态
-    isLogin.value = false
-    userName.value = ''
-    router.push('/login')
+    ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(() => {
+      // 退出登录逻辑：清除缓存、重置状态
+      tokenStore.removeToken()
+      userInfoStore.removeInfo()
+      isLogin.value = false
+      userName.value = ''
+      router.push('/login')
+      ElMessage({
+        type: 'success',
+        message: '退出登录成功'
+      })
+    }).catch(() => {
+      ElMessage({
+        type: 'info',
+        message: '已取消退出登录'
+      })
+    })
   }
 
 </script>
