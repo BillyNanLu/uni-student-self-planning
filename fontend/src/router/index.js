@@ -7,12 +7,16 @@ import LoginVue from '@/views/Login.vue'
 import Layout from '@/views/Layout.vue'
 
 import Home from "@/views/Home.vue"
-import Planning from "@/views/planning/Planning.vue"
+import Planning from "@/views/plan/Planning.vue"
 import AIChat from "@/views/AIChat.vue"     // 需登录
 import Resources from "@/views/Resources.vue"
 
+import PlanIndex from "@/views/plan/PlanIndex.vue";
+import PlanEvaluate from "@/views/plan/PlanEvaluate.vue";   // 需登录
+import PlanEvaluateIndex from "@/views/plan/PlanEvaluateIndex.vue";
+import PlanProgress from "@/views/plan/PlanProgress.vue";   // 需登录
+
 import Profile from "@/views/users/Profile.vue"   // 需登录
-import PlanProgress from "@/views/planning/PlanProgress.vue";   // 需登录
 
 //定义路由关系
 const routes = [
@@ -34,14 +38,30 @@ const routes = [
         // 子路由
         children: [
             { path: '/home', component: Home },
-            { path: '/planning', component: Planning },
+            {
+                path: '/planning',
+                component: Planning,
+                redirect: '/planning/index',
+                children: [
+                    { path: 'index', component: PlanIndex},
+                    {
+                        path: 'evaluate',
+                        component: PlanEvaluate,
+                        redirect: '/planning/evaluate/index',
+                        meta: { requiresAuth: true},
+                        children: [
+                            {path: 'index', component: PlanEvaluateIndex}
+                        ]
+                    },
+                    { path: 'progress', component: PlanProgress, meta: { requiresAuth: true } }
+                ]
+            },
             { path: '/ai-chat', component: AIChat, meta: { requiresAuth: true } },
             { path: '/resources', component: Resources },
         ]
     },
     // 需登录的页面（通过路由守卫限制）
-    { path: '/profile', component: Profile, meta: { requiresAuth: true } },
-    { path: '/planning/progress', component: PlanProgress, meta: { requiresAuth: true } }
+    { path: '/profile', component: Profile, meta: { requiresAuth: true } }
 ]
 
 //创建路由器

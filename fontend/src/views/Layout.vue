@@ -6,7 +6,7 @@
   const userInfoStore = useUserInfoStore();
   import {useTokenStore} from "@/stores/token.js"
   const tokenStore = useTokenStore();
-  import FooterVue from './Footer.vue'
+  import FooterVue from '../components/layout/Footer.vue'
 
   // 引入Element Plus组件和图标
   import {
