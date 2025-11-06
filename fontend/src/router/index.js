@@ -14,6 +14,7 @@ import Resources from "@/views/Resources.vue"
 import PlanIndex from "@/views/plan/PlanIndex.vue";
 import PlanEvaluate from "@/views/plan/PlanEvaluate.vue";   // 需登录
 import PlanEvaluateIndex from "@/views/plan/PlanEvaluateIndex.vue";
+import PlanEvaluateResult from "@/views/plan/PlanEvaluateResult.vue";   // 需登录
 import PlanProgress from "@/views/plan/PlanProgress.vue";   // 需登录
 
 import Profile from "@/views/users/Profile.vue"   // 需登录
@@ -50,7 +51,8 @@ const routes = [
                         redirect: '/planning/evaluate/index',
                         meta: { requiresAuth: true},
                         children: [
-                            {path: 'index', component: PlanEvaluateIndex}
+                            {path: 'index', component: PlanEvaluateIndex},
+                            {path: 'result', component: PlanEvaluateResult, meta: { requiresAuth: true }}
                         ]
                     },
                     { path: 'progress', component: PlanProgress, meta: { requiresAuth: true } }
