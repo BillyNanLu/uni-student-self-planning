@@ -12,7 +12,7 @@ public class Exam {
     private Integer id;
     @NotEmpty
     private String name;
-    private LocalDateTime date;
+    private String date;
     private String description;
     private Integer directionId;
     private String link;
