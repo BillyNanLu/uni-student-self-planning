@@ -10,4 +10,10 @@ public interface ExamService {
 
     // 删除考试
     boolean deleteExamById(Long id);
+
+    // 添加考试
+    Exam addExam(Exam exam);
+
+    // 更新考试
+    Exam updateExam(Integer id, Exam exam);
 }

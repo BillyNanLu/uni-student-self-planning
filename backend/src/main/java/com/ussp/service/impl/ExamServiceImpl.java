@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,5 +34,42 @@ public class ExamServiceImpl implements ExamService {
     public boolean deleteExamById(Long id) {
         // 如果返回值大于0，表示删除成功
         return examMapper.deleteExamById(id) > 0;
+    }
+
+    @Override
+    public Exam addExam(Exam exam) {
+        // 1. 检查是否存在同名考试
+        Exam existing = examMapper.findByName(exam.getName());
+        if (existing != null) {
+            return null; // 已存在同名考试
+        }
+
+        // 2. 设置默认值
+        if (exam.getStatus() == null) {
+            exam.setStatus(1);
+        }
+        exam.setCreateTime(LocalDateTime.now());
+
+        // 3. 插入数据库
+        int rows = examMapper.insertExam(exam);
+        if (rows > 0) {
+            return examMapper.findById(exam.getId());
+        }
+
+        return null;
+    }
+
+    @Override
+    public Exam updateExam(Integer id, Exam exam) {
+        // 1 先检查是否存在
+        Exam existing = examMapper.findById(id);
+        if (existing == null) return null;
+
+        // 2 更新字段（仅非空字段）
+        exam.setId(id);
+        int updated = examMapper.updateExam(exam);
+
+        // 3 返回最新数据
+        return updated > 0 ? examMapper.findById(id) : null;
     }
 }
