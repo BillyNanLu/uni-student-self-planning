@@ -18,7 +18,7 @@ public interface UserMapper {
     void register(String username, String md5String, String email, String phone, String name);
 
     // 用户修改自己的用户信息
-    @Update("update user set email=#{email}, phone=#{phone}, name=#{name} where id =#{id}")
+    @Update("update user set email=#{email}, phone=#{phone}, name=#{name}, grade=#{grade}, major=#{major} where id =#{id}")
     void update(User user);
 
     // 用户自己修改密码

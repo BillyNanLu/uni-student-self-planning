@@ -35,6 +35,8 @@ public class User {
     @Email
     private String email;            // 邮箱
     private String phone;            // 电话
+    private String grade;            // 年级
+    private String major;            // 专业
     private Integer role;            // 角色（0=学生, 1=管理员）
     private LocalDateTime createTime; // 注册时间
     private LocalDateTime lastLogin;  // 最近登录时间
