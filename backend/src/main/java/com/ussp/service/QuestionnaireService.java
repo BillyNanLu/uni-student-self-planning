@@ -18,4 +18,7 @@ public interface QuestionnaireService {
 
     // 更新问卷
     Questionnaire updateQuestionnaire(Long id, Questionnaire questionnaire);
+
+    // 获取问卷数量
+    int getQuestionnaireCount();
 }

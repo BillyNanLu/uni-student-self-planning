@@ -27,4 +27,10 @@ public class QuestionnaireController {
         }
         return new Result<>(0, "获取问卷信息成功", questionnaires);
     }
+
+    // TODO: 获取问卷数量
+    @GetMapping("/count")
+    public int getQuestionnaireCount() {
+        return questionnaireService.getQuestionnaireCount();
+    }
 }

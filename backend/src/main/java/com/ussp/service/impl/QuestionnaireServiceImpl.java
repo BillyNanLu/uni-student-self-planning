@@ -61,4 +61,9 @@ public class QuestionnaireServiceImpl implements QuestionnaireService {
         // 3. 返回最新数据
         return updated > 0 ? questionnaireMapper.findById(id) : null;
     }
+
+    @Override
+    public int getQuestionnaireCount() {
+        return questionnaireMapper.countQuestionnaires();
+    }
 }

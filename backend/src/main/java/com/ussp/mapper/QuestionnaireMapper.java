@@ -46,4 +46,8 @@ public interface QuestionnaireMapper {
             "WHERE id = #{id}" +
             "</script>")
     int updateQuestionnaire(Questionnaire questionnaire);
+
+    // 获取问卷数量
+    @Select("SELECT COUNT(*) FROM questionnaire WHERE status = 1")
+    int countQuestionnaires();
 }
