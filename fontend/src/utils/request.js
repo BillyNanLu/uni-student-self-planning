@@ -30,17 +30,24 @@ instance.interceptors.request.use(
 
 //添加响应拦截器
 instance.interceptors.response.use(
-    result=>{
-        // 判断业务状态码
-        if (result.data.code === 0)
-            return result.data;
+    result => {
+        // ⭐ 情况1：后端返回纯数字 / 字符串（没有 code）
+        if (typeof result.data === 'number' || typeof result.data === 'string') {
+            return { data: result.data }
+        }
 
-        // github撤回上一个git add
+        // ⭐ 情况2：后端返回纯数组（没有 code）
+        if (Array.isArray(result.data)) {
+            return { data: result.data }
+        }
 
-        // 服务异常
-        // alert(result.data.msg ? result.data.msg : '服务异常');
-        ElMessage.error(result.data.msg ? result.data.msg : '服务异常');
-        //异步的状态转化成失败的状态
+        // ⭐ 情况3：后端返回正常业务结构 { code, data, msg }
+        if (result.data.code === 0) {
+            return result.data
+        }
+
+        // ❗ 其他情况：视为异常
+        ElMessage.error(result.data.msg ? result.data.msg : '服务异常')
         return Promise.reject(result.data)
     },
     err=>{

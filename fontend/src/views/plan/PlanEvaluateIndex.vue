@@ -1,86 +1,70 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { questionnaireCountService, questionnaireListService } from '@/api/questionnaire.js'
+import { questionsByQuestionnaireIdService } from "@/api/question.js";
 
 const router = useRouter()
 
 // 步骤配置
-const steps = ['基础信息', '兴趣倾向', '能力自评', '职业倾向']
-const currentStep = ref(0) // 当前步骤（0-3）
+const steps = ref(['基础信息'])
+const currentStep = ref(0) // 当前步骤
+const questionnaireCount = ref(1) // 问卷数量，默认至少是1（基础信息）
+
+const questions = ref([])
+const answers = reactive({})  // 暂时存答案
 
 // 表单数据
 const formData = reactive({
   grade: '', // 年级
   major: '', // 专业
-  interest: [], // 兴趣倾向答案（数组索引对应题目索引）
-  ability: [], // 能力自评答案
-  career: [] // 职业倾向答案
+  answers: [] // 动态题目答案，按问卷索引存储数组
 })
 
-// 题目数据（后续可从数据库获取，当前为静态案例）
-const interestQuestions = [
-  {
-    content: '你更愿意花时间深入研究以下哪个领域？',
-    options: [
-      { label: 'A. 算法优化与人工智能原理', value: 'interest_1_A' },
-      { label: 'B. 医学病理与临床案例', value: 'interest_1_B' },
-      { label: 'C. 法律条文与判例分析', value: 'interest_1_C' },
-      { label: 'D. 以上都不感兴趣', value: 'interest_1_D' }
-    ]
-  },
-  {
-    content: '你是否愿意为一个研究课题持续投入6个月以上的时间？',
-    options: [
-      { label: 'A. 非常愿意', value: 'interest_2_A' },
-      { label: 'B. 愿意', value: 'interest_2_B' },
-      { label: 'C. 不确定', value: 'interest_2_C' },
-      { label: 'D. 不愿意', value: 'interest_2_D' }
-    ]
-  }
-]
 
-const abilityQuestions = [
-  {
-    content: '你每天能保持高效学习的时长大约是？',
-    options: [
-      { label: 'A. 6小时以上', value: 'ability_1_A' },
-      { label: 'B. 4-6小时', value: 'ability_1_B' },
-      { label: 'C. 2-4小时', value: 'ability_1_C' },
-      { label: 'D. 2小时以内', value: 'ability_1_D' }
-    ]
-  },
-  {
-    content: '面对"多任务并行"的压力，你的应对能力是？',
-    options: [
-      { label: 'A. 游刃有余', value: 'ability_2_A' },
-      { label: 'B. 可以应对', value: 'ability_2_B' },
-      { label: 'C. 勉强应对', value: 'ability_2_C' },
-      { label: 'D. 无法应对', value: 'ability_2_D' }
-    ]
-  }
-]
+// 调用函数，获取问卷数量
+const getQuestionnaireCount = async () => {
+  try {
+    const res = await questionnaireCountService()
+    console.log('后端返回:', res)
 
-const careerQuestions = [
-  {
-    content: '你未来3-5年的核心职业目标是？',
-    options: [
-      { label: 'A. 成为某领域专家', value: 'career_1_A' },
-      { label: 'B. 进入体制内', value: 'career_1_B' },
-      { label: 'C. 职场晋升', value: 'career_1_C' },
-      { label: 'D. 实现财务自由/时间自由', value: 'career_1_D' }
-    ]
-  },
-  {
-    content: '你对"职业带来的社会价值"的重视程度是？',
-    options: [
-      { label: 'A. 非常重视', value: 'career_2_A' },
-      { label: 'B. 重视', value: 'career_2_B' },
-      { label: 'C. 一般', value: 'career_2_C' },
-      { label: 'D. 不重视', value: 'career_2_D' }
-    ]
+    // 兼容纯数字返回（关键）
+    const count = Number(res.data)
+
+    // 如果解析失败，让 count 至少为 0
+    questionnaireCount.value = (isNaN(count) ? 0 : count) + 1 // +1 代表基础信息部分
+  } catch (error) {
+    console.error('获取问卷数量失败', error)
+    questionnaireCount.value = 1 // 异常时兜底，保证至少有1个步骤
   }
-]
+}
+
+// 问卷列表（动态获取）
+const questionnaires = ref([])
+
+// 获取问卷列表（包含 title）
+const getQuestionnaires = async () => {
+  try {
+    const res = await questionnaireListService()
+    // res.data 假设返回 [{id: 1, title: '兴趣倾向'}, {id:2, title:'能力自评'}, ...]
+    questionnaires.value = res.data || []
+
+    // 动态生成步骤标题（基础信息 + 问卷标题）
+    steps.value = ['基础信息', ...questionnaires.value.map(q => q.title)]
+
+    // 初始化 answers 数组，每个问卷一个空数组
+    formData.answers = questionnaires.value.map(() => [])
+  } catch (error) {
+    console.error('获取问卷列表失败', error)
+    ElMessage.error('加载问卷失败')
+  }
+}
+
+onMounted(() => {
+  getQuestionnaireCount()
+  getQuestionnaires()
+})
 
 // 表单引用
 const evaluateForm = ref(null)
@@ -88,31 +72,17 @@ const evaluateForm = ref(null)
 // 上一步
 const prevStep = () => {
   currentStep.value--
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // 下一步（验证当前步骤表单）
 const nextStep = async () => {
   try {
-    // 根据当前步骤验证对应的字段
-    let fieldsToValidate = []
-    switch(currentStep.value) {
-      case 0:
-        fieldsToValidate = ['grade', 'major']
-        break
-      case 1:
-        fieldsToValidate = interestQuestions.map((_, index) => `interest.${index}`)
-        break
-      case 2:
-        fieldsToValidate = abilityQuestions.map((_, index) => `ability.${index}`)
-        break
-      case 3:
-        fieldsToValidate = careerQuestions.map((_, index) => `career.${index}`)
-        break
-    }
-
-    // 验证所有必要字段
-    for (const field of fieldsToValidate) {
-      await evaluateForm.value.validateField(field)
+    if (currentStep.value === 0) {
+      // 只验证基础信息
+      await evaluateForm.value.validateField('grade')
+      await evaluateForm.value.validateField('major')
     }
 
     // 验证通过，进入下一步
@@ -124,6 +94,40 @@ const nextStep = async () => {
     console.log('表单验证失败:', error)
   }
 }
+
+watch(currentStep, async (newStep) => {
+  try {
+    // 第 0 步是基础信息，不加载问卷
+    if (newStep === 0) return
+
+    // ⚠️ 问卷列表可能还没加载完
+    if (!questionnaires.value || questionnaires.value.length === 0) return
+
+    const item = questionnaires.value[newStep - 1]
+    if (!item?.id) return  // 防止 undefined
+
+    // 请求题目列表
+    const res = await questionsByQuestionnaireIdService(item.id)
+    const data = res?.data || []
+
+    // 确保 options 不为 null，并初始化答案
+    data.forEach(q => {
+      if (!q.options) q.options = [] // 避免渲染报错
+
+      // 初始化答案
+      if (q.type === 1) answers[q.id] = ''   // 单选
+      if (q.type === 2) answers[q.id] = []   // 多选
+      if (q.type === 3) answers[q.id] = ''   // 文本
+    })
+
+    // 赋值到页面
+    questions.value = data
+
+  } catch (err) {
+    console.error('加载题目失败:', err)
+    ElMessage.error('加载题目失败，请检查网络或刷新页面')
+  }
+})
 
 // 提交测评
 const submitForm = async () => {
@@ -142,6 +146,8 @@ const submitForm = async () => {
     return
   }
 }
+
+
 </script>
 
 <template>
@@ -150,12 +156,12 @@ const submitForm = async () => {
       <!-- 标题与进度 -->
       <div class="evaluate-header">
         <h2 class="page-title">发展方向测评</h2>
-        <p class="page-desc">完成以下问卷，获取专属考研/考公/就业规划建议（共4部分，约5分钟）</p>
+        <p class="page-desc">完成以下问卷，获取专属考研/考公/就业规划建议（共{{questionnaireCount}}部分，不会花太久时间）</p>
 
         <!-- 进度条 -->
         <el-progress
-            :percentage="currentStep * 25"
-            stroke-width="6"
+            :percentage="questionnaireCount > 1 ? Math.round(currentStep * (100 / (questionnaireCount - 1))) : 0"
+            :stroke-width="6"
             class="progress-bar"
         />
         <div class="step-labels">
@@ -175,7 +181,7 @@ const submitForm = async () => {
           :model="formData"
           class="evaluate-form"
       >
-        <!-- 第一部分：基础信息 -->
+        <!-- 基础信息 -->
         <div v-if="currentStep === 0">
           <el-form-item
               label="你的年级"
@@ -197,73 +203,69 @@ const submitForm = async () => {
           >
             <el-input
                 v-model="formData.major"
-                placeholder="如：计算机科学与技术、临床医学"
+                placeholder="如：计算机科学与技术、机械设计制造及其自动化‌、临床医学、法学、国际贸易等"
             />
           </el-form-item>
         </div>
 
-        <!-- 第二部分：兴趣倾向（动态渲染题目） -->
-        <div v-if="currentStep === 1">
-          <el-form-item
-              v-for="(question, qIndex) in interestQuestions"
-              :key="qIndex"
-              :label="`Q${qIndex + 1}. ${question.content}`"
-              :prop="`interest.${qIndex}`"
-              :rules="[{ required: true, message: '请选择答案', trigger: 'change' }]"
-          >
-            <el-radio-group v-model="formData.interest[qIndex]">
-              <el-radio
-                  v-for="(option, oIndex) in question.options"
-                  :key="oIndex"
-                  :label="option.value"
+        <!-- 动态问卷题目 -->
+        <div v-else>
+          <div v-if="questions.length > 0">
+
+            <div
+                v-for="(q, index) in questions"
+                :key="q.id"
+                class="question-item"
+                style="margin-bottom: 20px;"
+            >
+
+              <!-- 题目 -->
+              <p class="question-title">{{ index + 1 }}. {{ q.content }}</p>
+
+              <!-- 单选题 -->
+              <el-radio-group
+                  v-if="q.type === 1"
+                  v-model="answers[q.id]"
               >
-                {{ option.label }}
-              </el-radio>
-            </el-radio-group>
-          </el-form-item>
+                <el-radio
+                    v-for="opt in (q.options || [])"
+                    :key="opt.key"
+                    :label="opt.key"
+                >
+                  {{ opt.label }}
+                </el-radio>
+              </el-radio-group>
+
+              <!-- 多选题 -->
+              <el-checkbox-group
+                  v-if="q.type === 2"
+                  v-model="answers[q.id]"
+              >
+                <el-checkbox
+                    v-for="opt in (q.options || [])"
+                    :key="opt.key"
+                    :label="opt.key"
+                >
+                  {{ opt.label }}
+                </el-checkbox>
+              </el-checkbox-group>
+
+              <!-- 文本题 -->
+              <el-input
+                  v-if="q.type === 3"
+                  type="textarea"
+                  v-model="answers[q.id]"
+                  placeholder="请输入..."
+              />
+
+            </div>
+
+          </div>
+
+          <p v-else style="color:#999;">正在加载题目...</p>
         </div>
 
-        <!-- 第三部分：能力自评 -->
-        <div v-if="currentStep === 2">
-          <el-form-item
-              v-for="(question, qIndex) in abilityQuestions"
-              :key="qIndex"
-              :label="`Q${qIndex + 1}. ${question.content}`"
-              :prop="`ability.${qIndex}`"
-              :rules="[{ required: true, message: '请选择答案', trigger: 'change' }]"
-          >
-            <el-radio-group v-model="formData.ability[qIndex]">
-              <el-radio
-                  v-for="(option, oIndex) in question.options"
-                  :key="oIndex"
-                  :label="option.value"
-              >
-                {{ option.label }}
-              </el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
 
-        <!-- 第四部分：职业倾向 -->
-        <div v-if="currentStep === 3">
-          <el-form-item
-              v-for="(question, qIndex) in careerQuestions"
-              :key="qIndex"
-              :label="`Q${qIndex + 1}. ${question.content}`"
-              :prop="`career.${qIndex}`"
-              :rules="[{ required: true, message: '请选择答案', trigger: 'change' }]"
-          >
-            <el-radio-group v-model="formData.career[qIndex]">
-              <el-radio
-                  v-for="(option, oIndex) in question.options"
-                  :key="oIndex"
-                  :label="option.value"
-              >
-                {{ option.label }}
-              </el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </div>
       </el-form>
 
       <!-- 操作按钮 -->
@@ -277,14 +279,15 @@ const submitForm = async () => {
         <el-button
             type="primary"
             @click="nextStep"
-            v-if="currentStep < 3"
+            :disabled="questionnaires.length === 0"
+            v-if="currentStep < questionnaireCount - 1"
         >
           下一步
         </el-button>
         <el-button
             type="success"
             @click="submitForm"
-            v-if="currentStep === 3"
+            v-if="currentStep === questionnaireCount - 1"
         >
           提交测评
         </el-button>
