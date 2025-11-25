@@ -15,4 +15,8 @@ public interface QuestionMapper {
                     typeHandler = com.ussp.handler.JsonTypeHandler.class)
     })
     List<Question> findByQuestionnaireId(@Param("qid") Long questionnaireId);
+
+
+    @Select("SELECT * FROM question WHERE id = #{id}")
+    Question findById(Long id);
 }

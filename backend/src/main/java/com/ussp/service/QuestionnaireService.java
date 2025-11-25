@@ -1,7 +1,9 @@
 package com.ussp.service;
 
+import com.ussp.dto.QuestionnaireSubmitDTO;
 import com.ussp.pojo.Exam;
 import com.ussp.pojo.Questionnaire;
+import com.ussp.vo.QuestionnaireResultVO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,4 +23,6 @@ public interface QuestionnaireService {
 
     // 获取问卷数量
     int getQuestionnaireCount();
+
+    QuestionnaireResultVO processSubmit(QuestionnaireSubmitDTO dto);
 }

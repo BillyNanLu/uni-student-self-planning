@@ -1,12 +1,12 @@
 package com.ussp.controller;
 
+import com.ussp.dto.QuestionnaireSubmitDTO;
 import com.ussp.pojo.Questionnaire;
 import com.ussp.pojo.Result;
 import com.ussp.service.QuestionnaireService;
+import com.ussp.vo.QuestionnaireResultVO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,5 +32,13 @@ public class QuestionnaireController {
     @GetMapping("/count")
     public int getQuestionnaireCount() {
         return questionnaireService.getQuestionnaireCount();
+    }
+
+
+    // TODO: 前端用户问卷提交
+    @PostMapping("/submit")
+    public Result submit(@RequestBody QuestionnaireSubmitDTO dto) {
+        QuestionnaireResultVO vo = questionnaireService.processSubmit(dto);
+        return Result.success(vo);
     }
 }

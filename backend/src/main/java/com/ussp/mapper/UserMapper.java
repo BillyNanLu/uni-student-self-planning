@@ -1,10 +1,7 @@
 package com.ussp.mapper;
 
 import com.ussp.pojo.User;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface UserMapper {
@@ -24,4 +21,9 @@ public interface UserMapper {
     // 用户自己修改密码
     @Update("update user set password=#{md5String} where id =#{id}")
     void updatePwd(String md5String, Integer id);
+
+    @Update("UPDATE user SET major=#{major}, grade=#{grade} WHERE id=#{userId}")
+    void updateMajorAndGrade(@Param("userId") Long userId,
+                             @Param("major") String major,
+                             @Param("grade") String grade);
 }
