@@ -1,5 +1,6 @@
 package com.ussp.mapper;
 
+import com.ussp.pojo.Question;
 import com.ussp.pojo.Questionnaire;
 import org.apache.ibatis.annotations.*;
 
@@ -50,4 +51,8 @@ public interface QuestionnaireMapper {
     // 获取问卷数量
     @Select("SELECT COUNT(*) FROM questionnaire WHERE status = 1")
     int countQuestionnaires();
+
+    // 查询问卷标题
+    @Select("SELECT title FROM questionnaire WHERE id = #{id}")
+    String findTitleById(Long id);
 }
