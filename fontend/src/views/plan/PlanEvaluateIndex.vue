@@ -139,6 +139,8 @@ const submitForm = async () => {
     ElMessage.success('测评提交成功！正在生成规划建议...')
     setTimeout(() => {
       router.push('/planning/evaluate/result')
+      // 滚动到顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }, 1500)
   } catch (error) {
     // 表单验证失败

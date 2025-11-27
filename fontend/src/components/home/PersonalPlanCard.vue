@@ -5,7 +5,7 @@ import useUserInfoStore from '@/stores/userInfo';
 import { Document } from '@element-plus/icons-vue';
 
 const router = useRouter();
-const userInfoStore = useUserInfoStore();
+
 const planInfo = ref({
   direction: '未知（请先完成测评）',
   schedule: '暂无',
@@ -13,14 +13,11 @@ const planInfo = ref({
 });
 
 onMounted(() => {
-  // 假设userInfoStore中有planInfo字段存储个性化规划数据
-  // if (userInfoStore.info.planInfo) {
-  //   planInfo.value = userInfoStore.info.planInfo;
-  // }
+
 });
 
 const viewReport = () => {
-  router.push('/planning/report');
+  router.push('/planning/evaluate/result');
 };
 </script>
 
@@ -33,8 +30,6 @@ const viewReport = () => {
       </div>
       <div class="card-content">
         <p class="plan-direction">推荐方向：{{ planInfo.direction }}</p>
-        <p class="plan-schedule">时间安排：{{ planInfo.schedule }}</p>
-        <p class="plan-path">学习路径：{{ planInfo.path }}</p>
         <el-button type="primary" @click="viewReport">查看完整AI报告</el-button>
       </div>
     </el-card>

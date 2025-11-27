@@ -1,8 +1,6 @@
 <script setup>
 import EvaluationEntry from '@/components/plan/EvaluationEntry.vue'
 import PlanningRules from '@/components/plan/PlanningRules.vue'
-import HotCareers from '@/components/plan/HotCareers.vue'
-import ExamSchedule from '@/components/plan/ExamSchedule.vue'
 </script>
 
 <template>
@@ -12,14 +10,7 @@ import ExamSchedule from '@/components/plan/ExamSchedule.vue'
 
     <!-- 2. 基础信息层 -->
     <div class="basic-info-section">
-      <!-- 2.1 规划规则说明 -->
       <PlanningRules />
-
-      <!-- 2.2 热门职业职业参考 -->
-      <HotCareers />
-
-      <!-- 2.3 考试安排 -->
-      <ExamSchedule />
     </div>
   </div>
 </template>
@@ -37,9 +28,3 @@ import ExamSchedule from '@/components/plan/ExamSchedule.vue'
   gap: 60px; /* 模块间间距 */
 }
 </style>
-
-
-<!--
-考试安排数据后续可从数据库获取，通过 v-for 动态渲染（当前为静态示例）。
-职业数据可对接后端，按热度 / 竞争比动态排序。
--->

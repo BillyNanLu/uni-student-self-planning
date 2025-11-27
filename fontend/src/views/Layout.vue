@@ -1,6 +1,6 @@
 <script setup>
-  import { ref, onMounted } from 'vue'
-  import { useRouter } from 'vue-router'
+  import { ref, onMounted, watch } from 'vue'
+  import { useRouter, useRoute } from 'vue-router'
   import { userInfoService } from "@/api/user.js"
   import useUserInfoStore from "@/stores/userInfo.js";
   const userInfoStore = useUserInfoStore();
@@ -18,12 +18,26 @@
   } from '@element-plus/icons-vue'
 
   const router = useRouter()
+  const route = useRoute()
 
   // 状态管理
   const isLogin = ref(!!tokenStore.token) // 用TokenStore中的token初始化登录状态
   const userName = ref('') // 用户名（登录后赋值）
   const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png') // 默认头像
   const activeMenu = ref('home') // 当前激活的导航菜单
+
+  // 根据路由自动设置activeMenu
+  const setActiveMenuByRoute = (path) => {
+    if (path.includes('/planning')) {
+      activeMenu.value = 'planning'
+    } else if (path.includes('/ai-chat')) {
+      activeMenu.value = 'ai-chat'
+    } else if (path.includes('/resources')) {
+      activeMenu.value = 'resources'
+    } else {
+      activeMenu.value = 'home'
+    }
+  }
 
   // 调用函数，获取用户相信信息
   const getUserInfo = async () => {
@@ -46,6 +60,9 @@
 
   // 页面挂载时初始化用户信息
   onMounted(() => {
+    // 根据当前路由设置激活菜单
+    setActiveMenuByRoute(route.path)
+
     if (tokenStore.token) { // 有Token才获取用户信息
       getUserInfo().catch(err => {
         // 若获取用户信息失败（如Token过期），清除Token并跳转登录
@@ -56,6 +73,15 @@
     }
   })
 
+  // 监听路由变化，自动更新激活菜单
+  watch(
+      () => route.path,
+      (newPath) => {
+        setActiveMenuByRoute(newPath)
+      },
+      { immediate: true }
+  )
+
   // 导航菜单切换：跳转到对应页面
   const handleMenuSelect = (index) => {
     activeMenu.value = index
@@ -64,13 +90,13 @@
         router.push('/home')
         break
       case 'planning':
-        router.push('/planning') // 规划模块主页（后续开发）
+        router.push('/planning')
         break
       case 'ai-chat':
-        router.push('/ai-chat') // AI对话页面（后续开发）
+        router.push('/ai-chat')
         break
       case 'resources':
-        router.push('/resources') // 资源中心页面（后续开发）
+        router.push('/resources')
         break
     }
   }
@@ -80,7 +106,7 @@
   const handleGoToRegister = () => router.push('/login?type=register')
 
   // 已登录状态下的操作
-  const handleGoToProfile = () => router.push('/profile') // 个人中心（后续开发）
+  const handleGoToProfile = () => router.push('/profile') // 个人中心
   const handleGoToPlanProgress = () => router.push('/planning/progress') // 规划进度（后续开发）
   const handleLogout = () => {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {

@@ -20,3 +20,24 @@ export const generateAiReport = (aiMaterial) => {
 
     return report;
 }
+
+
+
+// 生成AI报告的方法
+
+// const generateAiReport = async (userData) => {
+//   try {
+//     // 这里调用真实的AI接口
+//     const res = await generateAiReportApi({
+//       userData,
+//       answerId: localStorage.getItem('lastAnswerId')
+//     })
+//
+//     if (res.code === 0) {
+//       aiReportContent.value = res.data.report
+//       reportGenerated.value = true
+//     }
+//   } catch (error) {
+//     throw error
+//   }
+// }
