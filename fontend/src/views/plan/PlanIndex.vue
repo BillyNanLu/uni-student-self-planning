@@ -16,11 +16,7 @@ import PlanningRules from '@/components/plan/PlanningRules.vue'
 </template>
 
 <style scoped>
-.planning-page {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+
 .basic-info-section {
   margin-top: 40px;
   display: flex;

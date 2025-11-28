@@ -107,7 +107,7 @@
 
   // 已登录状态下的操作
   const handleGoToProfile = () => router.push('/profile') // 个人中心
-  const handleGoToPlanProgress = () => router.push('/planning/progress') // 规划进度（后续开发）
+  const handleGoToPlanProgress = () => router.push('/planning/progress') // 规划进度（要替换别的）
   const handleLogout = () => {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
       confirmButtonText: '确定',
