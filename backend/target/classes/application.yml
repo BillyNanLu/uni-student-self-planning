@@ -13,3 +13,9 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true  # 驼峰命名规则和下划线命名自动转化
+
+ai:
+  provider:
+    endpoint: https://ark.cn-beijing.volces.com/api/v3
+    apikey: d36571c5-ec3b-48d6-bbca-df026656d5d3
+    model: doubao-seed-1-6-251015

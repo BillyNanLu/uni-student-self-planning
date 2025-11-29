@@ -26,6 +26,18 @@
   --text-color: #303133;
 }
 
+/* 强制允许页面滚动，防止 Element Plus 等组件修改 */
+html, body {
+  overflow: auto !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+#app {
+  overflow: visible !important;
+  height: auto !important;
+}
+
 body {
   font-family: "Microsoft YaHei", sans-serif;
   color: var(--text-color);
