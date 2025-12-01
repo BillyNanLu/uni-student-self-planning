@@ -85,25 +85,10 @@ const changePassword = () => {
   ElMessage.success('密码修改成功，请重新登录！')
   passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
 }
-
-// 返回主页
-const goToHome = () => {
-  router.push('/home')
-}
 </script>
 
 <template>
   <div class="profile-container">
-    <!-- 返回按钮 -->
-    <div class="back-section">
-      <el-button
-          type="text"
-          @click="goToHome"
-          class="back-btn"
-      >
-        ← 返回主页
-      </el-button>
-    </div>
 
     <div class="main-content">
       <!-- 个人信息卡片 -->
@@ -311,9 +296,7 @@ const goToHome = () => {
 <style scoped>
 /* 整体容器 */
 .profile-container {
-  width: 100vw;
   min-height: 100vh;
-  background-color: #f8f9fa;
   padding: 20px;
   box-sizing: border-box;
 }
