@@ -5,15 +5,13 @@ import com.ussp.pojo.Exam;
 import java.util.List;
 
 public interface ExamService {
-    // 获取所有考试信息
-    List<Exam> getAllExams(Integer directionId, Integer year, Integer status);
+    List<Exam> getExamList();
 
-    // 删除考试
-    boolean deleteExamById(Long id);
+    List<Exam> getExamByDirection(Integer directionId);
 
-    // 添加考试
-    Exam addExam(Exam exam);
+    void addExam(Exam exam);
 
-    // 更新考试
-    Exam updateExam(Integer id, Exam exam);
+    void updateExam(Exam exam);
+
+    void deleteExam(Long id);
 }

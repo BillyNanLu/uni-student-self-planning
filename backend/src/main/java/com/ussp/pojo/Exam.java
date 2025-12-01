@@ -18,4 +18,7 @@ public class Exam {
     private String link;
     private Integer status;
     private LocalDateTime createTime;
+
+    // 额外给前端使用（不入库）
+    private String directionName;
 }

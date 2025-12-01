@@ -17,19 +17,38 @@ public class ExamController {
     @Autowired
     private ExamService examService;
 
-    // TODO: 获取考试信息
-    @GetMapping("/all")
-    public Result<List<Exam>> all(
-            @RequestParam(required = false) Integer direction_id,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false, defaultValue = "1") Integer status
-    ) {
-        List<Exam> exams = examService.getAllExams(direction_id, year, status);
+    // ------------------ 获取未来一年考试列表 ------------------
+    @GetMapping("/list")
+    public Result<List<Exam>> list() {
+        List<Exam> list = examService.getExamList();
+        return Result.success(list);
+    }
 
-        if (exams == null || exams.isEmpty()) {
-            return new Result<>(4001, "暂无考试信息", Collections.emptyList());
-        }
+    // ------------------ 根据方向获取考试 ------------------
+    @GetMapping("/listByDirection")
+    public Result<List<Exam>> listByDirection(@RequestParam Integer directionId) {
+        List<Exam> list = examService.getExamByDirection(directionId);
+        return Result.success(list);
+    }
 
-        return new Result<>(0, "获取考试信息成功", exams);
+    // ------------------ 新增考试 ------------------
+    @PostMapping("/add")
+    public Result<String> addExam(@RequestBody Exam exam) {
+        examService.addExam(exam);
+        return Result.success("添加成功");
+    }
+
+    // ------------------ 修改考试 ------------------
+    @PutMapping("/update")
+    public Result<String> updateExam(@RequestBody Exam exam) {
+        examService.updateExam(exam);
+        return Result.success("修改成功");
+    }
+
+    // ------------------ 删除考试 ------------------
+    @DeleteMapping("/delete")
+    public Result<String> deleteExam(@RequestParam Long id) {
+        examService.deleteExam(id);
+        return Result.success("删除成功");
     }
 }

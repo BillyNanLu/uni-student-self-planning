@@ -11,51 +11,37 @@ import java.util.List;
 @Mapper
 public interface ExamMapper {
 
-    @Select("<script>" +
-            "SELECT * FROM exam " +
-            "WHERE 1=1 " +
-            "<if test='status != null'> AND status = #{status} </if>" +
-            "<if test='directionId != null'> AND direction_id = #{directionId} </if>" +
-            "<if test='year != null'> AND date LIKE CONCAT('%', #{year}, '%') </if>" +
-            "ORDER BY create_time ASC" +
-            "</script>")
-    List<Exam> findExams(
-            @Param("directionId") Integer directionId,
-            @Param("year") Integer year,
-            @Param("status") Integer status
-    );
+    // 查询全部考试（未来一年）
+    @Select("""
+        SELECT e.*, d.name AS directionName
+        FROM exam e
+        LEFT JOIN direction d ON e.direction_id = d.id
+        WHERE e.status = 1
+        ORDER BY e.date
+    """)
+    List<Exam> getExamList();
 
+    // 根据方向查询
+    @Select("""
+        SELECT e.*, d.name AS directionName
+        FROM exam e
+        LEFT JOIN direction d ON e.direction_id = d.id
+        WHERE e.status = 1 AND e.direction_id = #{directionId}
+        ORDER BY e.date
+    """)
+    List<Exam> getExamByDirection(Integer directionId);
 
-    @Delete("DELETE FROM exam WHERE id = #{id}")
-    int deleteExamById(Long id);
+    // 新增考试
+    @Insert("INSERT INTO exam(name, date, description, direction_id, link, status) " +
+            "VALUES(#{name}, #{date}, #{description}, #{directionId}, #{link}, #{status})")
+    void insertExam(Exam exam);
 
-    // 按名称查重
-    @Select("SELECT * FROM exam WHERE name = #{name} LIMIT 1")
-    Exam findByName(@NotEmpty String name);
+    // 修改考试
+    @Update("UPDATE exam SET name=#{name}, date=#{date}, description=#{description}, " +
+            "direction_id=#{directionId}, link=#{link}, status=#{status} WHERE id=#{id}")
+    void updateExam(Exam exam);
 
-    // 按ID查询
-    @Select("SELECT * FROM exam WHERE id = #{id}")
-    Exam findById(@NotNull Integer id);
-
-    // 插入考试信息
-    @Insert("INSERT INTO exam (name, date, description, direction_id, link, status, create_time) " +
-            "VALUES (#{name}, #{date}, #{description}, #{directionId}, #{link}, #{status}, #{createTime})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insertExam(Exam exam);
-
-
-    // 动态更新考试信息
-    @Update("<script>" +
-            "UPDATE exam " +
-            "<set>" +
-            "  <if test='name != null'> name = #{name}, </if>" +
-            "  <if test='date != null'> date = #{date}, </if>" +
-            "  <if test='description != null'> description = #{description}, </if>" +
-            "  <if test='directionId != null'> direction_id = #{directionId}, </if>" +
-            "  <if test='link != null'> link = #{link}, </if>" +
-            "  <if test='status != null'> status = #{status}, </if>" +
-            "</set>" +
-            "WHERE id = #{id}" +
-            "</script>")
-    int updateExam(Exam exam);
+    // 删除考试
+    @Delete("DELETE FROM exam WHERE id=#{id}")
+    void deleteExam(@Param("id") Long id);
 }

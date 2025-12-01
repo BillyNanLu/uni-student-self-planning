@@ -1,103 +1,24 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch} from 'vue'
 // 引入Element Plus组件
 import { ElCard, ElTag, ElIcon } from 'element-plus'
 // 引入图标
 import { Notebook, Briefcase, Promotion, Link, Check } from '@element-plus/icons-vue'
 
-// 资源数据（按场景分类）
+import { getFurtherResourceList } from "@/api/resource.js"
+
 const resourceData = ref({
-  postgraduate: [
-    {
-      id: 1,
-      title: '官方真题渠道汇总',
-      link: 'https://yz.chsi.com.cn/',
-      desc: '优先从目标院校官网获取免费真题，研招网提供跨校真题汇总',
-      type: '官方渠道'
-    },
-    {
-      id: 2,
-      title: '公共课刷题平台',
-      link: 'https://www.fenbi.com/',
-      desc: '粉笔考研APP提供公共课及热门专业课真题免费刷题，含解析',
-      type: '免费资源'
-    },
-    {
-      id: 3,
-      title: '院校选择工具',
-      link: 'https://yz.chsi.com.cn/sch/',
-      desc: '官方院校及专业查询平台，可按地区、专业筛选，含招生数据',
-      type: '官方渠道'
-    },
-    {
-      id: 4,
-      title: '专业课资源获取指南',
-      link: 'https://m.koolearn.com/kaoyan/20251004/1878927.html',
-      desc: '新东方在线出品，含真题获取6大渠道及避坑指南',
-      type: '权威指南'
-    }
-  ],
-  civilServant: [
-    {
-      id: 1,
-      title: '国考官方信息发布平台',
-      link: 'http://www.scs.gov.cn/',
-      desc: '国家公务员局官网，发布招考公告、职位表、成绩查询等核心信息',
-      type: '官方渠道'
-    },
-    {
-      id: 2,
-      title: '公考真题刷题平台',
-      link: 'https://www.offcn.com/gongkao/',
-      desc: '中公教育真题库，含历年国考、省考真题及解析，支持分模块练习',
-      type: '权威资源'
-    },
-    {
-      id: 3,
-      title: '岗位选择查询系统',
-      link: 'http://www.scs.gov.cn/pp/gkweb/core/web/ui/business/home/gkhome.html',
-      desc: '官方职位查询工具，可按专业、学历、地区精准筛选目标岗位',
-      type: '官方渠道'
-    },
-    {
-      id: 4,
-      title: '考公政策解读专栏',
-      link: 'http://www.gov.cn/zhengce/zhuanti/2024gwy/',
-      desc: '中国政府网官方专栏，解读报考政策、应届生身份等关键要求',
-      type: '官方解读'
-    }
-  ],
-  employment: [
-    {
-      id: 1,
-      title: '全国校招信息平台',
-      link: 'https://job.mohrss.gov.cn/',
-      desc: '国家大学生就业服务平台，汇总全国企业校招、宣讲会信息',
-      type: '官方渠道'
-    },
-    {
-      id: 2,
-      title: '简历优化工具',
-      link: 'https://cv.zhaopin.com/',
-      desc: '智联招聘简历优化工具，含专业模板及针对性优化建议',
-      type: '实用工具'
-    },
-    {
-      id: 3,
-      title: '行业薪资查询',
-      link: 'https://www.jobui.com/salary/',
-      desc: '职友集薪资查询，可获取具体岗位薪资范围及地区差异数据',
-      type: '数据参考'
-    },
-    {
-      id: 4,
-      title: '大学生创业支持平台',
-      link: 'https://www.chinacyber.com/',
-      desc: '提供创业政策、项目孵化、资金申请等全链条创业支持服务',
-      type: '支持资源'
-    }
-  ]
+  postgraduate: [],
+  civilServant: [],
+  employment: []
 })
+
+// 场景对应 direction_id
+const sceneMap = {
+  postgraduate: 1,   // 考研
+  civilServant: 2,   // 考公
+  employment: 3      // 就业
+}
 
 // 场景切换
 const activeScene = ref('postgraduate')
@@ -119,6 +40,32 @@ const getTagType = (type) => {
   // 找不到匹配类型时返回默认值
   return typeMap[type] || 'default'
 }
+
+// 加载资源的公共方法
+const loadResources = async (scene) => {
+  const directionId = sceneMap[scene]
+  const res = await getFurtherResourceList(directionId)
+
+  // 后端字段是 description，但前端用 desc → 统一一下
+  resourceData.value[scene] = res.data.map(item => ({
+    id: item.id,
+    title: item.title,
+    link: item.link,
+    desc: item.description,
+    type: item.type
+  }))
+}
+
+// 初始化加载考研
+onMounted(() => {
+  loadResources('postgraduate')
+})
+
+// 场景变化 → 自动加载数据
+watch(activeScene, (newScene) => {
+  loadResources(newScene)
+})
+
 </script>
 
 <template>
