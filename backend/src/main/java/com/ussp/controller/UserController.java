@@ -13,7 +13,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -68,6 +70,7 @@ public class UserController {
             Map<String, Object> claims = new HashMap<>();
             claims.put("id", loginUser.getId());
             claims.put("username", loginUser.getUsername());
+            userService.updateLoginTime(loginUser.getId());
             String token = JwtUtil.genToken(claims);
             // 把token存到redis中
             ValueOperations<String, String> operations = stringRedisTemplate.opsForValue();
@@ -133,6 +136,14 @@ public class UserController {
         userService.updatePwd(newPwd);
 
         return Result.success("密码更新成功，请重新登录");
+    }
+
+    // TODO: 获取用户自己更新头像
+    @PostMapping("/updateAvatar")
+    public Result updateAvatar(@RequestParam("avatar") MultipartFile file) throws IOException {
+        String avatarUrl = userService.updateAvatar(file);
+        String fullUrl = "http://localhost:8080" + avatarUrl;
+        return Result.success(fullUrl);
     }
 
 
