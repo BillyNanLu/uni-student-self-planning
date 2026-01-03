@@ -47,19 +47,32 @@ instance.interceptors.response.use(
         }
 
         // ❗ 其他情况：视为异常
-        ElMessage.error(result.data.msg ? result.data.msg : '服务异常')
+        // ElMessage.error(result.data.msg ? result.data.msg : '服务异常')
         return Promise.reject(result.data)
     },
     err=>{
         // 判断响应状态码，如果是401，则证明未登录，提示请登录，并跳转到登录页面
-        if (err.response.status === 401) {
-            ElMessage.error('请登录');
-            router.push('/login')
+        // if (err.response.status === 401) {
+        //     ElMessage.error('请登录');
+        //     router.push('/login')
+        // } else {
+        //     // 服务异常
+        //     ElMessage.error('服务异常')
+        // }
+        // return Promise.reject(err); // 异步的状态转化成失败的状态
+        if (err.response) {
+            const status = err.response.status
+
+            if (status === 401) {
+                ElMessage.error('请登录')
+                router.push('/login')
+            } else {
+                ElMessage.error(err.response.data?.msg || '服务异常')
+            }
         } else {
-            // 服务异常
-            ElMessage.error('服务异常')
+            // 无响应（如请求失败/404/跨域/后端未启动）
+            ElMessage.error('无法连接服务器，请检查接口地址或后端是否启动')
         }
-        return Promise.reject(err); // 异步的状态转化成失败的状态
     }
 )
 
