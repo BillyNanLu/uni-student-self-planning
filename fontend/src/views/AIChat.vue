@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { marked } from 'marked'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Cpu, User, Refresh, ArrowRight } from '@element-plus/icons-vue'
 
-// API 服务
 import {
   getChatHistoryService,
   saveMessageService,
@@ -12,38 +12,49 @@ import {
 } from '@/api/aichat.js'
 
 import useUserInfoStore from "@/stores/userInfo.js";
-const userInfoStore = useUserInfoStore();
+const userInfoStore = useUserInfoStore()
 
+// 用户信息
+const userId = ref(userInfoStore.info?.id || null)
 const avatar = ref(userInfoStore.info?.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png')
-// 头像加载失败处理
-const handleAvatarError = (e) => {
-  // 加载失败时使用默认图片
-  e.target.src = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+// ----------- 会话ID（每次进入页面自动生成一个新的） -----------
+function createSessionId() {
+  return 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10)
 }
+const sessionId = ref(createSessionId())
 
-// 会话ID
-const sessionId = ref(localStorage.getItem('ai_chat_session_id') || createSessionId())
-const userId = ref(userInfoStore.info?.id || null) // 添加空值保护
-
-// 防止重复发送的锁
+// 聊天数据
+const messages = ref([])
+const inputContent = ref('')
+const isLoading = ref(false)
 const isSending = ref(false)
 
-// 创建一个新的会话ID
-function createSessionId() {
-  const sid = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-  localStorage.setItem("ai_chat_session_id", sid)
-  return sid
+// ----------- 初始化欢迎语 -----------
+function setWelcomeMessage() {
+  messages.value = [{
+    id: Date.now(),
+    sender: "ai",
+    content: "你好！我是你的规划助手，可以帮助你分析学习计划、职业方向、报考建议等~",
+    renderedContent: "你好！我是你的规划助手，可以帮助你分析学习计划、职业方向、报考建议等~",
+    time: formatTime(new Date())
+  }]
 }
 
-// 消息列表
-const messages = ref([])
-// 输入框
-const inputContent = ref('')
-// loading
-const isLoading = ref(false)
+// ----------- 时间格式化 -----------
+function formatTime(val) {
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return ''
 
-// ------------------ 初始化聊天记录 ------------------
-const initChatHistory = async () => {
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} `
+      + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+// ----------- 加载历史消息 -----------
+const loadHistory = async () => {
+  console.log(userId.value)
+  console.log(sessionId.value)
   if (!userId.value) {
     setWelcomeMessage()
     return
@@ -51,184 +62,114 @@ const initChatHistory = async () => {
 
   try {
     const res = await getChatHistoryService({
-      userId: userId.value,
-      sessionId: sessionId.value
+      userId: userId.value
     })
 
-    if (res.code === 0) {
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        messages.value = res.data.map(item => ({
-          id: item.id,
-          content: item.content,
-          sender: item.role === 0 ? 'user' : 'ai',
-          time: formatTime(item.create_time)
-        }))
-      } else {
-        setWelcomeMessage()
-      }
+    if (res.code === 0 && Array.isArray(res.data) && res.data.length > 0) {
+      messages.value = res.data.map(m => ({
+        id: m.id,
+        sender: m.role === 0 ? 'user' : 'ai',
+        content: m.content,
+        renderedContent: m.role === 1 ? marked(m.content) : m.content,
+        time: formatTime(m.createTime)
+      }))
     } else {
       setWelcomeMessage()
     }
   } catch (e) {
-    console.error('加载聊天记录失败:', e)
+    console.error("加载聊天记录失败:", e)
     setWelcomeMessage()
-    ElMessage.error("无法连接服务器，请确认后端是否启动")
   }
 }
 
-function setWelcomeMessage() {
-  messages.value = [{
-    id: Date.now(),
-    content: '你好！我是你的规划助手，可以帮你分析学习计划、解答规划疑问~',
-    sender: 'ai',
-    time: new Date().toTimeString().slice(0, 5)
-  }]
+// ----------- 自动滚动到底部 -----------
+function scrollToBottom() {
+  setTimeout(() => {
+    const el = document.querySelector('.chat-content .el-scrollbar__wrap')
+    if (el) el.scrollTop = el.scrollHeight
+  }, 20)
 }
 
-// 格式化时间
-const formatTime = (val) => {
-  try {
-    const d = new Date(val)
-    return d.toTimeString().slice(0, 5)
-  } catch (e) {
-    return new Date().toTimeString().slice(0, 5)
-  }
-}
-
-// ------------------ 保存消息（统一后端字段） ------------------
-const saveMessage = async (content, role) => {
-  try {
-    const res = await saveMessageService({
-      userId: userId.value,
-      sessionId: sessionId.value,
-      role,
-      content
-    })
-    if (res.code === 0) {
-      return res.data
-    }
-  } catch (e) {
-    console.error("保存消息失败:", e)
-    // 不显示错误提示，避免打扰用户体验
-  }
-  return null
-}
-
-// ------------------ 请求 AI 回复 ------------------
-const askAI = async (content) => {
-  try {
-    const res = await getAiResponseService({
-      userId: userId.value,
-      sessionId: sessionId.value,
-      content
-    })
-
-    if (res.code === 0) {
-      return res.data.content || "抱歉，我没有理解你的问题。"
-    } else {
-      return res.message || '抱歉，我暂时无法回答，请稍后再试~'
-    }
-  } catch (e) {
-    console.error("AI服务请求失败:", e)
-    return "抱歉，我暂时无法回答，请稍后再试~"
-  }
-}
-
-// ------------------ 发送消息 ------------------
+// ----------- 发送消息（用户 → AI） -----------
 const sendMessage = async () => {
   if (isSending.value) return
+  if (!inputContent.value.trim()) {
+    ElMessage.warning("请输入内容")
+    return
+  }
+
   isSending.value = true
 
+  const text = inputContent.value.trim()
+
+  // 添加用户消息
+  const userMsg = {
+    id: Date.now(),
+    sender: "user",
+    content: text,
+    renderedContent: text,
+    time: formatTime(new Date())
+  }
+  messages.value.push(userMsg)
+
+  inputContent.value = ""
+  isLoading.value = true
+
   try {
-    if (!inputContent.value.trim()) {
-      ElMessage.warning("请输入内容")
-      return
-    }
-
-    const text = inputContent.value.trim()
-
-    // 前端只展示，不保存
-    messages.value.push({
-      id: Date.now(),
-      content: text,
-      sender: "user",
-      time: formatTime(new Date())
-    })
-
-    inputContent.value = ""
-    isLoading.value = true
-
-    // 只调用后端，让后端保存消息
+    // 请求 AI 回复
     const res = await getAiResponseService({
       userId: userId.value,
       sessionId: sessionId.value,
       content: text
     })
 
-    const aiText = res.data
+    const aiText = res?.data || "抱歉，我暂时无法回答，请稍后再试~"
 
-    // 前端展示AI消息
+    // 显示 AI 回复
     messages.value.push({
       id: Date.now() + 1,
-      content: aiText,
       sender: "ai",
+      content: aiText,
+      renderedContent: marked(aiText),
       time: formatTime(new Date())
     })
 
   } catch (e) {
     console.error(e)
-    ElMessage.error("发送失败")
+    ElMessage.error(e)
   } finally {
-    isLoading.value = false
     isSending.value = false
+    isLoading.value = false
   }
 }
 
-// ------------------ 清空聊天记录 ------------------
+// ----------- 清空聊天（仅前端清屏 + 新会话）-----------
 const clearChat = async () => {
   ElMessageBox.confirm(
-      '确定要清空聊天记录吗？',
-      '提示',
-      { type: 'warning' }
-  ).then(async () => {
-    try {
-      if (userId.value) {
-        await clearChatHistoryService({
-          userId: userId.value,
-          sessionId: sessionId.value
-        })
-      }
+      "确认清空当前会话的聊天记录？",
+      "提示",
+      { type: "warning" }
+  ).then(() => {
 
-      sessionId.value = createSessionId()
-      setWelcomeMessage()
-      ElMessage.success("聊天记录已清空")
-    } catch (e) {
-      console.error('清空聊天记录失败:', e)
-      ElMessage.error("清空失败")
-    }
+    // 1️⃣ 本地消息列表清空
+    messages.value = []
+
+    // 2️⃣ 生成新的 sessionId
+    sessionId.value = createSessionId()
+
+    // 3️⃣ 重新显示欢迎语
+    setWelcomeMessage()
+
+    ElMessage.success("聊天已清空（已开启新会话）")
   })
 }
 
-// 滚动到底部
-const scrollToBottom = () => {
-  setTimeout(() => {
-    const el = document.querySelector('.chat-content .el-scrollbar__wrap')
-    if (el) el.scrollTop = el.scrollHeight
-  }, 50)
-}
 
-onMounted(() => {
-  initChatHistory().then(() => scrollToBottom())
-})
+// ----------- 生命周期：进入页面就加载记录 -----------
+onMounted(() => loadHistory())
 
-watch([messages, isLoading], () => {
-  scrollToBottom()
-})
+watch([messages, isLoading], () => scrollToBottom())
 
-// 在控制台执行，检查滚动相关属性
-console.log('body overflow:', getComputedStyle(document.body).overflow);
-console.log('html overflow:', getComputedStyle(document.documentElement).overflow);
-console.log('body height:', getComputedStyle(document.body).height);
 </script>
 
 <template>
@@ -266,7 +207,7 @@ console.log('body height:', getComputedStyle(document.body).height);
                 <el-icon><Cpu /></el-icon>
               </el-avatar>
               <div class="message-bubble ai-bubble">
-                <p class="bubble-content" v-html="msg.content.replace(/\n/g, '<br>')"></p>
+                <p class="bubble-content" v-html="msg.renderedContent"></p>
                 <span class="message-time">{{ msg.time }}</span>
               </div>
             </template>
