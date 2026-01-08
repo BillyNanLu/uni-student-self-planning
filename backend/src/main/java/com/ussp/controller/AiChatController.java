@@ -2,6 +2,7 @@ package com.ussp.controller;
 
 import com.ussp.pojo.AiChat;
 import com.ussp.pojo.Result;
+import com.ussp.service.AdminSysConfigService;
 import com.ussp.service.AiChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +15,14 @@ public class AiChatController {
 
     @Autowired
     private AiChatService aiChatService;
+    @Autowired
+    private AdminSysConfigService sysConfigService;
+
 
     // ------------------ 获取聊天历史 ------------------
     @GetMapping("/history")
-    public Result<List<AiChat>> history(@RequestParam Long userId,
-                                        @RequestParam String sessionId) {
-        List<AiChat> list = aiChatService.getHistory(userId, sessionId);
+    public Result<List<AiChat>> history(@RequestParam Long userId) {
+        List<AiChat> list = aiChatService.getHistory(userId);
         return Result.success(list);
     }
 
@@ -45,6 +48,14 @@ public class AiChatController {
     public Result<String> response(@RequestParam Long userId,
                                    @RequestParam String sessionId,
                                    @RequestParam String content) {
+
+        // 检查 AI 开关状态
+        String aiEnable = sysConfigService.getConfigValue("ai_service_enable");
+        if (!"true".equalsIgnoreCase(aiEnable)) {
+            return Result.error("AI 聊天服务已关闭，请稍后再试");
+        }
+
+        // ---------------- 正常逻辑 ----------------
 
         // 保存用户消息
         AiChat userMsg = new AiChat();
