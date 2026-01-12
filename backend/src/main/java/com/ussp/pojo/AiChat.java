@@ -11,4 +11,7 @@ public class AiChat {
     private Integer role;  // 0=用户, 1=AI
     private String content;
     private LocalDateTime createTime;
+
+    // 添加 username 字段（用于存储关联查询结果）
+    private String username;
 }
