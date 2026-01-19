@@ -11,40 +11,65 @@ public interface FurtherMapper {
     @Select("SELECT * FROM further WHERE direction_id = #{directionId} AND status = 1 ORDER BY id DESC")
     List<Further> getByDirection(Integer directionId);
 
-    // 管理员：按方向查询资源列表（directionId 可为空）
-    @Select("<script>" +
-            "SELECT * FROM further " +
-            "<where>" +
-            "  <if test='directionId != null'> direction_id = #{directionId} </if>" +
-            "</where>" +
-            "ORDER BY id DESC" +
-            "</script>")
-    List<Further> adminList(@Param("directionId") Integer directionId);
+    // 分页查询
+    @Select("""
+            SELECT f.*,
+                    d.name AS direction_name
+            FROM further f
+            LEFT JOIN direction d ON f.direction_id = d.id
+            WHERE (#{keyword} IS NULL OR f.title LIKE CONCAT('%', #{keyword}, '%'))
+                  AND (#{directionId} IS NULL OR f.direction_id = #{directionId})
+                  AND (#{status} IS NULL OR f.status = #{status})
+            LIMIT #{offset}, #{pageSize}
+            """)
+    List<Further> selectPage(String keyword, Integer directionId, Integer status, Integer offset, Integer pageSize);
 
-    // 管理员：根据ID查询
-    @Select("SELECT * FROM further WHERE id = #{id}")
-    Further getById(@Param("id") Integer id);
+    // 总数
+    @Select("""
+            SELECT COUNT(*)
+            FROM further
+            WHERE (#{keyword} IS NULL OR title LIKE CONCAT('%',#{keyword},'%'))
+              AND (#{directionId} IS NULL OR direction_id = #{directionId})
+              AND (#{status} IS NULL OR status = #{status})
+            """)
+    Integer count(String keyword, Integer directionId, Integer status);
 
-    // 管理员：新增资源
-    @Insert("INSERT INTO further(direction_id, title, content, url, create_time, update_time) " +
-            "VALUES(#{directionId}, #{title}, #{content}, #{url}, NOW(), NOW())")
-    int insert(Further further);
+    // 获取单条
+    @Select("SELECT f.*, d.name AS direction_name FROM further f LEFT JOIN direction d ON f.direction_id = d.id WHERE f.id = #{id}")
+    @Results({
+            @Result(column = "direction_name", property = "directionName")
+    })
+    Further selectById(Integer id);
 
-    // 管理员：修改资源
-    @Update("<script>" +
-            "UPDATE further " +
-            "<set>" +
-            " <if test='directionId != null'> direction_id = #{directionId}, </if>" +
-            " <if test='title != null'> title = #{title}, </if>" +
-            " <if test='content != null'> content = #{content}, </if>" +
-            " <if test='url != null'> url = #{url}, </if>" +
-            " update_time = NOW() " +
-            "</set>" +
-            "WHERE id = #{id}" +
-            "</script>")
-    int update(Further further);
+    // 插入
+    @Insert("""
+            INSERT INTO further(direction_id, title, link, description, type, status)
+            VALUES(#{directionId}, #{title}, #{link}, #{description}, #{type}, #{status})
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    void insert(Further further);
 
-    // 管理员：删除
+    // 更新
+    @Update("""
+            UPDATE further
+            SET direction_id = #{directionId},
+                title = #{title},
+                link = #{link},
+                description = #{description},
+                type = #{type},
+                status = #{status}
+            WHERE id = #{id}
+            """)
+    void update(Further further);
+
+    // 删除
     @Delete("DELETE FROM further WHERE id = #{id}")
-    int delete(@Param("id") Integer id);
+    void delete(Integer id);
+
+    // 更新状态
+    @Update("UPDATE further SET status = #{status} WHERE id = #{id}")
+    void updateStatus(Integer id, Integer status);
+
+    @Select("SELECT COUNT(*) FROM further")
+    Long countFurther();
 }
