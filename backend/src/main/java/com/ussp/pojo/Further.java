@@ -14,4 +14,7 @@ public class Further {
     private String type;         // 资源类型（官方渠道/免费资源等）
     private Integer status;      // 状态（1启用，0停用）
     private LocalDateTime createTime; // 创建时间
+
+
+    private String directionName;
 }
