@@ -14,4 +14,6 @@ public class Career {
     private String extraType;
     private Integer status;
     private LocalDateTime createTime;
+
+    private String directionName;
 }
