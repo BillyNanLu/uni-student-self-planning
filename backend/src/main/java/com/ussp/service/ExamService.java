@@ -1,6 +1,8 @@
 package com.ussp.service;
 
+import com.ussp.dto.ExamQueryDTO;
 import com.ussp.pojo.Exam;
+import com.ussp.pojo.PageResult;
 
 import java.util.List;
 
@@ -9,9 +11,15 @@ public interface ExamService {
 
     List<Exam> getExamByDirection(Integer directionId);
 
-    void addExam(Exam exam);
+    PageResult<Exam> page(ExamQueryDTO query);
 
-    void updateExam(Exam exam);
+    Exam getById(Integer id);
 
-    void deleteExam(Long id);
+    void add(Exam exam);
+
+    void update(Exam exam);
+
+    void delete(Integer id);
+
+    void updateStatus(Integer id, Integer status);
 }

@@ -30,25 +30,4 @@ public class ExamController {
         List<Exam> list = examService.getExamByDirection(directionId);
         return Result.success(list);
     }
-
-    // ------------------ 新增考试 ------------------
-    @PostMapping("/add")
-    public Result<String> addExam(@RequestBody Exam exam) {
-        examService.addExam(exam);
-        return Result.success("添加成功");
-    }
-
-    // ------------------ 修改考试 ------------------
-    @PutMapping("/update")
-    public Result<String> updateExam(@RequestBody Exam exam) {
-        examService.updateExam(exam);
-        return Result.success("修改成功");
-    }
-
-    // ------------------ 删除考试 ------------------
-    @DeleteMapping("/delete")
-    public Result<String> deleteExam(@RequestParam Long id) {
-        examService.deleteExam(id);
-        return Result.success("删除成功");
-    }
 }
