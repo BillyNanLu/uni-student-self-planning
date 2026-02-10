@@ -9,5 +9,6 @@ public class QuestionnaireSubmitDTO {
     private Long userId;
     private String grade;
     private String major;
+    private String direction;
     private List<AnswerDTO> answers;
 }
