@@ -7,6 +7,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class DirectionResult {
     private String preferredDirection;
-    private String systemDirection;
-    private int isConflict;
+    //private String systemDirection;
+    //private int isConflict;
 }
