@@ -131,6 +131,80 @@ public class PromptBuilder {
         return prompt;
     }
 
+    public static String buildDirectionPrompt(
+            String preferredDirection,
+            Map<String, Integer> riasec,
+            Map<String, Integer> ability,
+            Map<String, Integer> self,
+            int kaoyan, int kaogong, int jiuye,
+            String grade,
+            String major,
+            String interestTags,
+            String abilityTags,
+            String selfEvalTags,
+            String otherSelf
+    ) {
+
+        String riasecStr = mapToReadableString(riasec);
+        String abilityStr = mapToReadableString(ability);   // learning=xx...
+        String selfStr = mapToReadableString(self);         // postgraduate_intent=...
+
+        String scores = String.format("考研=%d，考公=%d，就业=%d", kaoyan, kaogong, jiuye);
+
+        String cleanInterest = stripBrackets(interestTags);
+        String cleanAbility  = stripBrackets(abilityTags);
+        String cleanSelfEval = stripBrackets(selfEvalTags);
+
+        return """
+你是一名大学生学习与发展规划分析助手。请基于以下信息生成一段 150–220 字的推荐方向理由说明。
+
+要求（非常重要）：
+1. **第一句话必须严格使用以下格式：**
+   “AI推荐你最适合的方向是：XXX。”
+   其中 XXX 必须从【考研 / 考公 / 就业】中选择且只能出现一个。
+2. **决定推荐方向的主要依据必须是：**
+   - 用户六维度兴趣（霍兰德职业兴趣理论RIASEC）
+   - 用户能力测评分数
+   - 用户自我评价分数
+   - 用户的兴趣/能力/自评标签
+   - 用户的年级、专业情况
+   - 用户自述内容
+3. **三方向匹配分数（kaoyan/kaogong/jiuye）只能作为“次要参考”，不能直接决定推荐方向。**
+   推荐理由中不得提到和出现三方向匹配分数。  
+   若三方向分数最高的方向与综合特征不一致，应根据综合特征给出更合理的方向，并简要说明原因。
+4. 若用户偏好方向与系统推荐不同，请自然、委婉说明原因。
+5. 语言自然、简洁、专业，不使用条目符号，不使用标题，全篇不超过 220 字。
+
+以下是用户数据：
+- 用户偏好方向：%s
+- 用户六维度兴趣分数（霍兰德职业兴趣理论RIASEC）：%s
+- 用户能力测评分数：%s
+- 用户自我评价分数：%s
+- 三方向匹配分数（仅供参考，权重最低）：%s
+- 用户年级：%s
+- 用户专业：%s
+- 兴趣标签：%s
+- 能力标签：%s
+- 自我评价标签：%s
+- 用户自述：%s
+
+请基于以上信息生成一段推荐理由文本，不超过 220 字。
+""".formatted(
+                safe(preferredDirection),
+                riasecStr,
+                abilityStr,
+                selfStr,
+                scores,
+                safe(grade),
+                safe(major),
+                cleanInterest,
+                cleanAbility,
+                cleanSelfEval,
+                safe(otherSelf)
+        );
+
+    }
+
     // Map 转简短字符串：{R=10,I=5} → "R=10, I=5"
     private static String mapToReadableString(Map<String, Integer> map) {
         if (map == null || map.isEmpty()) return "";
