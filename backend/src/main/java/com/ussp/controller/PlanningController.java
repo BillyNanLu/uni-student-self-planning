@@ -61,4 +61,27 @@ public class PlanningController {
         return Result.success(planningService.getLatestDirectionResult(userId));
     }
 
+    // TODO：触发 AI 报告生成
+    @PostMapping("/generate-report/{userId}")
+    public Result<String> generateAiReport(
+            @PathVariable Long userId,
+            @RequestBody AiReportRequestDTO request) {
+
+        String report = planningService.generateAiReportForUser(userId, request);
+        return Result.success(report);
+    }
+
+    // TODO: 获取用户最新的 AI 报告
+    @GetMapping("/report/latest/{userId}")
+    public Result<String> getLatestAiReport(@PathVariable Long userId) {
+        return Result.success(planningService.getLatestAiReport(userId));
+    }
+
+    // TODO: 获取用户所有 AI 报告
+    @GetMapping("report/history/{userId}")
+    public Result getUserPlanHistory(@PathVariable Long userId) {
+        List<UserPlan> list = planningService.getUserPlanHistory(userId);
+        return Result.success(list);
+    }
+
 }
