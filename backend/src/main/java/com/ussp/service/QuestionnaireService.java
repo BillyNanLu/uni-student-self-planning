@@ -25,4 +25,8 @@ public interface QuestionnaireService {
     int getQuestionnaireCount();
 
     QuestionnaireResultVO processSubmit(QuestionnaireSubmitDTO dto);
+
+    List<Questionnaire> paginationQuery(Integer pageNum, Integer pageSize);
+
+    Questionnaire findById(Long id);
 }
