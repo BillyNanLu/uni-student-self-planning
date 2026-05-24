@@ -8,6 +8,7 @@ import com.ussp.mapper.*;
 import com.ussp.pojo.OptionItem;
 import com.ussp.pojo.Question;
 import com.ussp.pojo.Questionnaire;
+import com.ussp.pojo.UserPlan;
 import com.ussp.service.QuestionnaireService;
 import com.ussp.vo.DirectionResult;
 import com.ussp.vo.QuestionnaireResultVO;
@@ -18,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class QuestionnaireServiceImpl implements QuestionnaireService {
@@ -33,6 +36,8 @@ public class QuestionnaireServiceImpl implements QuestionnaireService {
     private QuestionMapper questionMapper;
     @Autowired
     private UserDirectionMapper userDirectionMapper;
+    @Autowired
+    private UserPlanMapper userPlanMapper;
 
     @Override
     public List<Questionnaire> getAllQuestionnaires(Integer status) {
@@ -91,38 +96,64 @@ public class QuestionnaireServiceImpl implements QuestionnaireService {
     public QuestionnaireResultVO processSubmit(QuestionnaireSubmitDTO dto) {
         Long userId = dto.getUserId();
 
+        if (userId == null) {
+            throw new IllegalArgumentException("用户ID不能为空！");
+        }
+
         // ① 更新基础信息
         userMapper.updateMajorAndGrade(userId, dto.getMajor(), dto.getGrade());
 
         // ② 保存答案（只存内容不存分）
         saveAnswers(userId, dto.getAnswers());
 
-        // ③ 获取用户主动选择方向（Q25）
-        String preferred = extractPreferredDirection(dto.getAnswers());
+        // ③ 获取用户主动选择方向
+//        String preferred = extractPreferredDirection(dto.getAnswers());
+//        if ("A".equals(preferred)) {
+//            preferred = "考研";
+//        } else if ("B".equals(preferred)) {
+//            preferred = "考公";
+//        } else if ("C".equals(preferred)) {
+//            preferred = "就业";
+//        }
+        String preferred = dto.getDirection();
 
-        // ④ 计算分数
+        // ④ 计算kaoyan、kaogong、jiuye分数
         ScoreVO score = calculateScores(dto.getAnswers());
 
         // ⑤ 保存 user_direction
         DirectionResult result = saveUserDirection(userId, preferred, score);
 
+        // ⑥ 保存分数到 user_plan
+        saveUserPlan(userId, score);
+
         return new QuestionnaireResultVO(score, result);
     }
 
-
-
     private void saveAnswers(Long userId, List<AnswerDTO> answers) {
-        answers.forEach(a -> {
+
+        // 删除用户已有的答案，只执行一次
+        if (answerMapper.exitsAnswerById(userId) > 0) {
+            answerMapper.deleteAnswerByUserId(userId);
+            System.out.println("【一次性删除旧答案】");
+        }
+
+        // 再批量插入所有题目的回答
+        for (AnswerDTO a : answers) {
+            if (a == null || a.getValue() == null) continue;
+
             String content = (a.getValue() instanceof List)
                     ? JSON.toJSONString(a.getValue())
                     : a.getValue().toString();
+
             answerMapper.insertAnswer(userId, a.getQuestionId(), content);
-        });
+            System.out.println("插入答案：Q" + a.getQuestionId());
+        }
     }
 
     private String extractPreferredDirection(List<AnswerDTO> answers) {
         return answers.stream()
                 .filter(a -> a.getQuestionId() == 25)
+                .filter(a -> a.getValue() != null)
                 .findFirst()
                 .map(a -> a.getValue().toString())
                 .orElse(null);
@@ -232,11 +263,58 @@ public class QuestionnaireServiceImpl implements QuestionnaireService {
     }
 
     private DirectionResult saveUserDirection(Long userId, String preferred, ScoreVO score) {
-        String system = score.maxDirection();
-        int conflict = (preferred != null && !preferred.equals(system)) ? 1 : 0;
+        if (userId == null) {
+            throw new IllegalArgumentException("用户ID不能为空，无法保存方向结果！");
+        }
 
-        userDirectionMapper.insertOrUpdate(userId, preferred, system, conflict);
+        // String system = score.maxDirection();
+        // int conflict = (preferred != null && !preferred.equals(system)) ? 1 : 0;
 
-        return new DirectionResult(preferred, system, conflict);
+        userDirectionMapper.insertOrUpdate(userId, preferred);
+
+        return new DirectionResult(preferred);
+    }
+
+    // 新增方法：保存 user_plan
+    private void saveUserPlan(Long userId, ScoreVO score) {
+        UserPlan plan = new UserPlan();
+        plan.setUserId(userId);
+
+        // 如果有模板ID可以设置
+        plan.setTemplateId(null);
+
+        // 存分数
+        Map<String, Integer> scoreMap = new HashMap<>();
+        scoreMap.put("考研", score.getKaoyan());
+        scoreMap.put("考公", score.getKaogong());
+        scoreMap.put("就业", score.getJiuye());
+        plan.setUserScore(scoreMap);
+
+        userPlanMapper.insert(plan);
+    }
+
+
+    /**
+     * 分页查询
+     *
+     * @param pageNum
+     * @param pageSize
+     * @return
+     */
+    @Override
+    public List<Questionnaire> paginationQuery(Integer pageNum, Integer pageSize) {
+        if (pageNum == null || pageNum < 1) {
+            pageNum = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
+        int offset = (pageNum - 1) * pageSize;
+        return questionnaireMapper.paginationQuery(offset, pageSize);
+    }
+
+    @Override
+    public Questionnaire findById(Long id) {
+        return questionnaireMapper.findById(id);
     }
 }
