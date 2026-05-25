@@ -55,4 +55,10 @@ public interface QuestionnaireMapper {
     // 查询问卷标题
     @Select("SELECT title FROM questionnaire WHERE id = #{id}")
     String findTitleById(Long id);
+
+    @Select("SELECT * FROM questionnaire LIMIT #{offset}, #{pageSize}")
+    List<Questionnaire> paginationQuery(Integer offset, Integer pageSize);
+
+    @Select("SELECT COUNT(*) FROM questionnaire")
+    Long countQuestionnaire();
 }
